@@ -31,7 +31,7 @@ function getPresenterRaw(row) {
 export function getPresenterBucket(row) {
   const raw = getPresenterRaw(row);
   if (!raw) return '';
-  const parts = raw.split(/[,\u3001\/／・\s]+/).map(x => x.trim()).filter(Boolean);
+  const parts = raw.split(/[,\u3001/／・\s]+/).map(x => x.trim()).filter(Boolean);
   for (const p of parts) {
     if (MAIN_PRESENTERS.has(p)) return p;
   }
@@ -95,7 +95,7 @@ export function buildSearchText(row) {
   return fields
     .flatMap(v => {
       const str = String(v ?? '');
-      return str.split(/[\s,、，\/／・]+/).filter(Boolean);
+      return str.split(/[\s,、，/／・]+/).filter(Boolean);
     })
     .map(x => x.toLowerCase())
     .join(' ');

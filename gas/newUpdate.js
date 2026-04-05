@@ -13,14 +13,14 @@ function newUpdate() {
   sheet.appendRow(header);
 
   const channelId = 'UC1l7GtlvAmCOXRlxjImbWvw'; // 晴れる屋MTG
-  let videoData = [];
+  const videoData = [];
   let total = 0;
 
   // チャンネル情報から「アップロード動画リスト」のIDを取得
   const channelResponse = YouTube.Channels.list('contentDetails', { id: channelId });
   const uploadsPlaylistId = channelResponse.items[0].contentDetails.relatedPlaylists.uploads;
 
-  let nextPageToken = '';
+  const nextPageToken = '';
 
   const playlistResponse = YouTube.PlaylistItems.list('snippet,contentDetails', {
     playlistId: uploadsPlaylistId,

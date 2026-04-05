@@ -1,0 +1,72 @@
+import js from '@eslint/js';
+
+export default [
+  js.configs.recommended,
+  {
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        document: 'readonly',
+        window: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        Number: 'readonly',
+        Array: 'readonly',
+        Set: 'readonly',
+        Map: 'readonly',
+        String: 'readonly',
+        encodeURIComponent: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-console': 'off',
+      'eqeqeq': 'error',
+      'no-var': 'error',
+      'prefer-const': 'warn',
+      'no-undef': 'error',
+    },
+  },
+  {
+    files: ['gas/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        SpreadsheetApp: 'readonly',
+        HtmlService: 'readonly',
+        ContentService: 'readonly',
+        ScriptApp: 'readonly',
+        UrlFetchApp: 'readonly',
+        Utilities: 'readonly',
+        FormApp: 'readonly',
+        DriveApp: 'readonly',
+        YouTube: 'readonly',
+        Logger: 'readonly',
+        console: 'readonly',
+        Number: 'readonly',
+        Array: 'readonly',
+        Set: 'readonly',
+        Map: 'readonly',
+        String: 'readonly',
+        Date: 'readonly',
+        Math: 'readonly',
+        Sheet: 'writable',
+        SS: 'readonly',
+        EXCEL_INFO: 'readonly',
+        convertISO8601ToTime: 'readonly',
+        logAccess_: 'readonly',
+        fetchDatabaseJson: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': 'off',
+      'no-redeclare': 'off',
+    },
+  },
+  {
+    ignores: ['node_modules/', 'docs/index.html'],
+  },
+];

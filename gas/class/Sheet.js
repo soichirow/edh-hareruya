@@ -438,7 +438,7 @@ class Sheet {
   replaceAllText(string, replaced) {
     console.log(string, replaced);
     const textFinder = this.sheet.createTextFinder(string);
-    textFinder.replaceAllWith(after);
+    textFinder.replaceAllWith(replaced);
     return this;
   }
 

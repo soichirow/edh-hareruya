@@ -42,7 +42,7 @@ function fetchMtgCardDataJa() {
       const colorIdentity = (card.color_identity || []).join(",");
       const imageUri = getImageNormal(card);
       const scryfallUri = card.scryfall_uri || "";
-      const cmc = (card.cmc != null) ? card.cmc : "";
+      const cmc = (card.cmc !== null && card.cmc !== undefined) ? card.cmc : "";
 
       // R列以降に書き込み（12列）
       sheet.getRange(row, 18, 1, 12).setValues([[
@@ -86,7 +86,7 @@ function findCardPreferJa(cardName, fetchOptions) {
 
 // 429 を中心に簡易リトライ（指数バックオフ）
 function fetchJsonWithRetry_(url, fetchOptions, maxRetries) {
-  const retries = (maxRetries == null) ? 5 : maxRetries;
+  const retries = (maxRetries === null || maxRetries === undefined) ? 5 : maxRetries;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     const res = UrlFetchApp.fetch(url, fetchOptions);

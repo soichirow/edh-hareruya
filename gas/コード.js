@@ -13,7 +13,7 @@ function searchOtakuCardVideosFromHareluya() {
   sheet.appendRow(header);
 
   const channelId = 'UC1l7GtlvAmCOXRlxjImbWvw'; // 晴れる屋MTG
-  let videoData = [];
+  const videoData = [];
   let total = 0;
 
   // チャンネル情報から「アップロード動画リスト」のIDを取得

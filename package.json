@@ -2,14 +2,19 @@
   "name": "edh-otaku-cards",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "EDHオタクカード画像一覧 - GitHub Pages版",
   "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "gas:push": "cd gas && npx @google/clasp push",
     "gas:pull": "cd gas && npx @google/clasp pull"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.0",
     "vitest": "^3.1.1"
   }
 }
