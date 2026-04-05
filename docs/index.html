@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>EDHオタクカード一覧</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f913.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --footer-h: 64px; }
+    body { padding-bottom: var(--footer-h); }
+    .card-img-top { background: #f3f4f6; }
+    .card-title a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+    .meta a { text-decoration: underline; text-underline-offset: 2px; }
+    #colorBox .col { padding-right: .25rem; padding-left: .25rem; }
+    .no-footer { padding-bottom: 0 !important; }
+  </style>
+</head>
+<body>
+
+  <header class="border-bottom sticky-top bg-white">
+    <div class="container py-2">
+      <h1 class="h6 m-0">EDHオタクカード画像一覧</h1>
+    </div>
+  </header>
+
+  <main class="container py-3">
+    <div class="row g-2 align-items-center mb-2">
+      <div class="col-12 col-md-4">
+        <input id="q" type="search" class="form-control" placeholder="カード名で検索（含む）">
+      </div>
+      <div class="col-6 col-md-3">
+        <select id="presenter" class="form-select">
+          <option value="">プレゼンター（すべて）</option>
+          <option>トロピ大塚</option>
+          <option>いってつ</option>
+          <option>スギちゃん</option>
+          <option>タイシン</option>
+          <option>タカノシゲキ</option>
+          <option>ソラノ</option>
+          <option>ブチャラティ</option>
+          <option>卍幻日輪廻卍のタイシン</option>
+          <option>その他</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <select id="sortKey" class="form-select">
+          <option value="none">ソートなし</option>
+          <option value="color">色（Identity）</option>
+          <option value="episode">話数</option>
+          <option value="cmc">マナ総量（CMC）</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <select id="sortDir" class="form-select">
+          <option value="asc">昇順</option>
+          <option value="desc">降順</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row g-2 mb-2" id="colorBox" aria-label="色で絞り込み（Color Identity）">
+      <div class="col-4 col-sm-2">
+        <input type="checkbox" class="btn-check" id="cW" value="W" autocomplete="off">
+        <label class="btn btn-outline-secondary w-100" for="cW">白</label>
+      </div>
+      <div class="col-4 col-sm-2">
+        <input type="checkbox" class="btn-check" id="cU" value="U" autocomplete="off">
+        <label class="btn btn-outline-secondary w-100" for="cU">青</label>
+      </div>
+      <div class="col-4 col-sm-2">
+        <input type="checkbox" class="btn-check" id="cB" value="B" autocomplete="off">
+        <label class="btn btn-outline-secondary w-100" for="cB">黒</label>
+      </div>
+      <div class="col-4 col-sm-2">
+        <input type="checkbox" class="btn-check" id="cR" value="R" autocomplete="off">
+        <label class="btn btn-outline-secondary w-100" for="cR">赤</label>
+      </div>
+      <div class="col-4 col-sm-2">
+        <input type="checkbox" class="btn-check" id="cG" value="G" autocomplete="off">
+        <label class="btn btn-outline-secondary w-100" for="cG">緑</label>
+      </div>
+      <div class="col-4 col-sm-2">
+        <input type="checkbox" class="btn-check" id="cC" value="C" autocomplete="off">
+        <label class="btn btn-outline-secondary w-100" for="cC">無</label>
+      </div>
+    </div>
+
+    <div id="stat" class="text-muted small mb-2">loading...</div>
+    <div id="grid" class="row g-3">loading...</div>
+  </main>
+
+  <nav id="footer" class="navbar bg-body-tertiary fixed-bottom border-top">
+    <div class="container py-1" style="height: 42px;">
+      <div class="d-flex w-100 justify-content-between align-items-center">
+        <button id="btnHideFooter"
+          class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+          style="width:24px; height:24px; padding:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1
+                     .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707
+                     5.354 11.354a.5.5 0 1 1-.708-.708L7.293 8 4.646 5.354a.5.5
+                     0 0 1 0-.708z"/>
+          </svg>
+        </button>
+        <div class="text-end" style="font-size:9px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          連絡先：そういちろう
+          <a href="https://x.com/black777cat" target="_blank" rel="noopener" style="color:#666;">X</a> /
+          <a href="https://bsky.app/profile/black777cat.bsky.social" target="_blank" rel="noopener" style="color:#666;">bluesky</a> /
+          <a href="https://www.amazon.co.jp/hz/wishlist/ls/1Z0X9ZM1D65A7?ref_=wl_share" target="_blank" rel="noopener" style="color:#666;">ギフトを贈る</a>
+          このサイトはファンコンテンツ・ポリシーに沿った非公式のファンコンテンツです。
+          ウィザーズ社の認可/許諾は得ていません。
+          題材の一部に、ウィザーズ・オブ・ザ・コースト社の財産を含んでいます。
+          &copy; Wizards of the Coast LLC.
+          <a href="https://company.wizards.com/ja/legal/fancontentpolicy" target="_blank" rel="noopener" style="color:#666;">ポリシー</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <script type="module">
+    // ===== card-utils.js のロジックをインポート風に埋め込み =====
+    // (GitHub Pagesはモジュール非対応のためインライン)
+
+    const KEY_IMG = '画像URL';
+    const KEY_JA = 'カード名 (日本語)';
+    const KEY_EN = 'カード名 (英語)';
+    const KEY_PRES = 'プレゼンター';
+    const KEY_COLOR_ID = 'Color Identity';
+    const KEY_EPISODE = '話数';
+    const KEY_CMC = 'CMC';
+    const KEY_YT = '動画URL';
+    const KEY_SCRY = 'Scryfall';
+    const KEY_THEME = 'テーマ';
+    const KEY_COMM = '関連する統率者';
+
+    const MAIN_PRESENTERS = new Set([
+      'トロピ大塚', 'いってつ', 'スギちゃん', 'タイシン',
+      'タカノシゲキ', 'ソラノ', 'ブチャラティ', '卍幻日輪廻卍のタイシン',
+    ]);
+
+    const s = (v) => String(v ?? '').trim();
+
+    function getTitle(row) {
+      return s(row[KEY_JA]) || s(row[KEY_EN]) || 'カード';
+    }
+    function getPresenterRaw(row) { return s(row[KEY_PRES]); }
+    function getPresenterBucket(row) {
+      const raw = getPresenterRaw(row);
+      if (!raw) return '';
+      const parts = raw.split(/[,\u3001\/／・\s]+/).map(x => x.trim()).filter(Boolean);
+      for (const p of parts) if (MAIN_PRESENTERS.has(p)) return p;
+      return 'その他';
+    }
+    function ciSet(row) {
+      const v = row[KEY_COLOR_ID];
+      if (Array.isArray(v)) return new Set(v.map(x => String(x).toUpperCase()).filter(c => 'WUBRG'.includes(c)));
+      const letters = String(v ?? '').toUpperCase().match(/[WUBRG]/g) || [];
+      return new Set(letters);
+    }
+    function matchColorsCommander(row, checked) {
+      const set = new Set(checked);
+      const have = ciSet(row);
+      if (set.size === 0) return true;
+      if (set.size === 1 && set.has('C')) return have.size === 0;
+      if (set.has('C')) set.delete('C');
+      for (const c of have) if (!set.has(c)) return false;
+      return true;
+    }
+    const COLOR_ORDER = { 'W': 1, 'U': 2, 'B': 3, 'R': 4, 'G': 5 };
+    function colorSortKey(row) {
+      const have = ciSet(row);
+      if (have.size === 0) return [0, 0, getTitle(row).toLowerCase()];
+      const seq = ['W', 'U', 'B', 'R', 'G'].filter(c => have.has(c));
+      return [COLOR_ORDER[seq[0]], seq.length, getTitle(row).toLowerCase()];
+    }
+    function toNum(v) {
+      if (typeof v === 'number') return v;
+      const n = Number(String(v).replace(/[^\d.-]/g, ''));
+      return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
+    }
+    function getCmc(row) {
+      const raw = row?.[KEY_CMC];
+      const str = String(raw ?? '').trim();
+      if (str === '') return Number.POSITIVE_INFINITY;
+      const n = Number(str);
+      return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+    }
+    function buildSearchText(row) {
+      return [row[KEY_JA], row[KEY_EN], row[KEY_COMM], row[KEY_THEME]]
+        .flatMap(v => String(v ?? '').split(/[\s,、，\/／・]+/).filter(Boolean))
+        .map(x => x.toLowerCase())
+        .join(' ');
+    }
+
+    const toHttps = (u) => (typeof u === 'string' ? u.replace(/^http:\/\//i, 'https://') : '');
+
+    // ===== DOM =====
+    const ALL = [];
+    let view = [];
+    const grid = document.getElementById('grid');
+    const stat = document.getElementById('stat');
+
+    // ===== レンダリング =====
+    function render(list) {
+      grid.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      let shown = 0;
+
+      for (const row of list) {
+        const url = s(row[KEY_IMG]);
+        if (!url) continue;
+        const title = getTitle(row);
+
+        const col = document.createElement('div');
+        col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+
+        const card = document.createElement('div');
+        card.className = 'card h-100';
+
+        const img = document.createElement('img');
+        img.className = 'card-img-top';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.src = toHttps(url);
+        img.alt = title;
+        img.onerror = function () { if (col.parentElement) col.remove(); };
+
+        const body = document.createElement('div');
+        body.className = 'card-body p-2';
+
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'card-title fs-6 mb-1';
+        const capLink = document.createElement('a');
+        capLink.href = row[KEY_SCRY] || '#';
+        capLink.target = '_blank';
+        capLink.rel = 'noopener';
+        capLink.textContent = title;
+        titleEl.appendChild(capLink);
+
+        const meta1 = document.createElement('div');
+        meta1.className = 'meta text-muted small';
+        const pres = getPresenterRaw(row);
+        const colors = Array.from(ciSet(row)).join('') || '無';
+        const ep = s(row[KEY_EPISODE]);
+        let baseText = '';
+        if (pres) baseText += 'P:' + pres + ' / ';
+        baseText += '色:' + colors + ' / ';
+        baseText += 'CMC:' + (Number.isFinite(getCmc(row)) ? getCmc(row) : '-') + ' / ';
+        meta1.append(baseText);
+        if (ep) {
+          const epLink = document.createElement('a');
+          epLink.href = row[KEY_YT] || '#';
+          epLink.target = '_blank';
+          epLink.rel = 'noopener';
+          epLink.textContent = ep + '話';
+          meta1.appendChild(epLink);
+        }
+
+        const meta2 = document.createElement('div');
+        meta2.className = 'meta text-muted small';
+        if (row[KEY_COMM]) meta2.append('統:' + row[KEY_COMM] + ' ');
+        const sun = document.createElement('a');
+        sun.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(title);
+        sun.target = '_blank';
+        sun.rel = 'noopener';
+        sun.textContent = '☀️';
+        meta2.appendChild(sun);
+        if (row[KEY_THEME]) {
+          const tags = String(row[KEY_THEME]).split(/[\s,、，\/／・#]+/).filter(Boolean);
+          if (tags.length) meta2.append(' ' + tags.map(t => '#' + t).join(''));
+        }
+
+        body.append(titleEl, meta1, meta2);
+        card.append(img, body);
+        col.appendChild(card);
+        frag.appendChild(col);
+        shown++;
+      }
+
+      grid.appendChild(frag);
+      stat.textContent = '表示: ' + shown + ' / 全' + ALL.length;
+    }
+
+    // ===== フィルタ + ソート =====
+    function applyFilterSort() {
+      const q = s(document.getElementById('q').value).toLowerCase();
+      const presSel = s(document.getElementById('presenter').value);
+      const sortKey = document.getElementById('sortKey').value;
+      const sortDir = document.getElementById('sortDir').value;
+      const checked = [...document.querySelectorAll('#colorBox input[type="checkbox"]:checked')].map(x => x.value);
+      const mul = (sortDir === 'desc') ? -1 : 1;
+
+      view = ALL.filter(row => {
+        if (q && !String(row._searchText || '').includes(q)) return false;
+        if (presSel && presSel !== getPresenterBucket(row)) return false;
+        if (!matchColorsCommander(row, checked)) return false;
+        return true;
+      });
+
+      if (sortKey === 'color') {
+        view.sort((a, b) => {
+          const aa = colorSortKey(a), bb = colorSortKey(b);
+          for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
+            if (aa[i] === bb[i]) continue;
+            return (aa[i] < bb[i] ? -1 : 1) * mul;
+          }
+          return 0;
+        });
+      } else if (sortKey === 'episode') {
+        view.sort((a, b) => (toNum(a[KEY_EPISODE]) - toNum(b[KEY_EPISODE])) * mul);
+      } else if (sortKey === 'cmc') {
+        view.sort((a, b) => {
+          const d = getCmc(a) - getCmc(b);
+          if (d !== 0) return d * mul;
+          const aa = colorSortKey(a), bb = colorSortKey(b);
+          for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
+            if (aa[i] === bb[i]) continue;
+            return (aa[i] < bb[i] ? -1 : 1) * mul;
+          }
+          return 0;
+        });
+      }
+
+      render(view);
+    }
+
+    // ===== イベント =====
+    let t;
+    const onChange = () => { clearTimeout(t); t = setTimeout(applyFilterSort, 120); };
+    document.getElementById('q').addEventListener('input', onChange);
+    document.getElementById('presenter').addEventListener('change', onChange);
+    document.getElementById('sortKey').addEventListener('change', onChange);
+    document.getElementById('sortDir').addEventListener('change', onChange);
+    document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el => el.addEventListener('change', onChange));
+
+    // ===== フッター表示/非表示 =====
+    const footer = document.getElementById('footer');
+    document.getElementById('btnHideFooter').addEventListener('click', () => {
+      if (footer.style.display !== 'none') {
+        footer.style.display = 'none';
+        document.body.classList.add('no-footer');
+      } else {
+        footer.style.display = '';
+        document.body.classList.remove('no-footer');
+      }
+    });
+
+    // ===== データ取得（GAS JSON API） =====
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyB4dhlTnD6qjbiEszJ4r75hTHpKUSQ1Mxcqjy0mTZARxMMyzMwkAi5RkmAScV003dY8Q/exec?format=json&limit=3000';
+
+    try {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const rows = await res.json();
+      rows.forEach(row => { row._searchText = buildSearchText(row); });
+      ALL.push(...rows);
+      applyFilterSort();
+    } catch (err) {
+      console.error(err);
+      grid.textContent = 'データ取得エラー: ' + err.message;
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "edh-otaku-cards",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EDHオタクカード画像一覧 - GitHub Pages版",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "gas:push": "cd gas && npx @google/clasp push",
+    "gas:pull": "cd gas && npx @google/clasp pull"
+  },
+  "devDependencies": {
+    "vitest": "^3.1.1"
+  }
+}
