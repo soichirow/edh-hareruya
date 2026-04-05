@@ -46,14 +46,8 @@
     .card-title a:hover { text-decoration: underline; text-underline-offset: 2px; }
     .meta a { text-decoration: none; color: var(--hr-orange); }
     .meta a:hover { text-decoration: underline; }
-    /* 色ドット */
-    .color-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; text-align: center; font-size: 9px; line-height: 16px; color: #fff; font-weight: bold; vertical-align: middle; }
-    .color-dot-W { background: #F9D94A; color: #333; }
-    .color-dot-U { background: #0E68AB; }
-    .color-dot-B { background: #2B2B2B; }
-    .color-dot-R { background: #D32029; }
-    .color-dot-G { background: #00733E; }
-    .color-dot-C { background: #9E9E9E; }
+    /* マナシンボル */
+    .mana-sym { display: inline-block; width: 16px; height: 16px; vertical-align: middle; }
     /* 色フィルターボタン MTGカラー */
     #colorBox .col { padding-right: .25rem; padding-left: .25rem; }
     .btn-color { border: 2px solid #ccc; background: transparent; color: inherit; }
@@ -213,6 +207,13 @@
 
     <!-- グリッド -->
     <div id="grid" class="row g-3"></div>
+
+    <!-- もっと見るボタン -->
+    <div id="loadMoreWrap" class="text-center py-3 d-none">
+      <button id="loadMoreBtn" class="btn btn-outline-primary px-5" style="border-color: var(--hr-orange); color: var(--hr-orange);">
+        <span id="loadMoreLabel">もっと見る</span> (<span id="loadMoreRemaining">0</span>)
+      </button>
+    </div>
   </main>
 
   <!-- ===== モバイルフィルター Offcanvas ===== -->
@@ -250,12 +251,16 @@
         </div>
         <button class="btn btn-sm btn-outline-light" id="cacheClearBtn" style="font-size:0.65rem;" title="キャッシュクリア">🗑 <span id="cacheClearLabel">キャッシュクリア</span></button>
       </div>
-      <p class="mb-0" style="font-size:10px; opacity:0.8;" id="footerDisclaimer">
+      <p class="mb-1" style="font-size:10px; opacity:0.8;" id="footerDisclaimer">
         このサイトはファンコンテンツ・ポリシーに沿った非公式のファンコンテンツです。
         ウィザーズ社の認可/許諾は得ていません。
         題材の一部に、ウィザーズ・オブ・ザ・コースト社の財産を含んでいます。
         &copy; Wizards of the Coast LLC.
         <a href="https://company.wizards.com/ja/legal/fancontentpolicy" target="_blank" rel="noopener" id="footerPolicy">ポリシー</a>
+      </p>
+      <p class="mb-0" style="font-size:10px; opacity:0.6;">
+        Card data &amp; images provided by <a href="https://scryfall.com/" target="_blank" rel="noopener">Scryfall API</a>.
+        Scryfall is not affiliated with this site.
       </p>
     </div>
   </footer>
@@ -491,30 +496,39 @@
       }
     }
 
-    // ===== 色ドット生成 =====
+    // ===== マナシンボル生成（Scryfall SVG） =====
+    function manaIcon(color) {
+      const img = document.createElement('img');
+      img.className = 'mana-sym';
+      img.src = `https://svgs.scryfall.io/card-symbols/${color}.svg`;
+      img.alt = color;
+      img.width = 16;
+      img.height = 16;
+      return img;
+    }
     function colorDots(row) {
       const have = ciSet(row);
-      if (have.size === 0) {
-        const dot = document.createElement('span');
-        dot.className = 'color-dot color-dot-C';
-        dot.textContent = 'C';
-        return [dot];
-      }
-      return ['W','U','B','R','G'].filter(c => have.has(c)).map(c => {
-        const dot = document.createElement('span');
-        dot.className = `color-dot color-dot-${c}`;
-        dot.textContent = c;
-        return dot;
-      });
+      if (have.size === 0) return [manaIcon('C')];
+      return ['W','U','B','R','G'].filter(c => have.has(c)).map(c => manaIcon(c));
     }
+
+    // ===== ページネーション =====
+    const PAGE_SIZE = 60;
+    let displayCount = PAGE_SIZE;
+
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+      displayCount += PAGE_SIZE;
+      render(view);
+    });
 
     // ===== レンダリング =====
     function render(list) {
       grid.innerHTML = '';
       const frag = document.createDocumentFragment();
       let shown = 0;
+      const limit = Math.min(displayCount, list.length);
 
-      for (let idx = 0; idx < list.length; idx++) {
+      for (let idx = 0; idx < limit; idx++) {
         const row = list[idx];
         const url = s(row[KEY_IMG]);
         if (!url) continue;
@@ -612,10 +626,22 @@
 
       grid.appendChild(frag);
       stat.textContent = t().stat(shown, ALL.length);
+
+      // もっと見るボタン
+      const remaining = list.length - limit;
+      const wrap = document.getElementById('loadMoreWrap');
+      if (remaining > 0) {
+        wrap.classList.remove('d-none');
+        document.getElementById('loadMoreRemaining').textContent = remaining;
+        document.getElementById('loadMoreLabel').textContent = lang === 'en' ? 'Load More' : 'もっと見る';
+      } else {
+        wrap.classList.add('d-none');
+      }
     }
 
     // ===== フィルタ + ソート =====
-    function applyFilterSort() {
+    function applyFilterSort(keepPage) {
+      if (!keepPage) displayCount = PAGE_SIZE;
       const q = s(document.getElementById('q').value).toLowerCase();
       const presSel = s(document.getElementById('presenter').value);
       const sortKey = document.getElementById('sortKey').value;
@@ -886,8 +912,14 @@
         console.error('Cache parse error:', e);
         showSkeletons();
       }
-      // バックグラウンドで最新を取得
-      fetchFromAPI().then(rows => { if (rows) loadRows(rows); });
+      // バックグラウンドで最新を取得（同一なら再描画しない）
+      fetchFromAPI().then(rows => {
+        if (!rows) return;
+        const newJson = JSON.stringify(rows);
+        const oldJson = cachedJson;
+        if (newJson !== oldJson) { loadRows(rows); console.log('Data updated from API'); }
+        else { console.log('Data unchanged, skipping re-render'); }
+      });
     } else {
       // キャッシュなし → スケルトン表示してAPI取得
       showSkeletons();
