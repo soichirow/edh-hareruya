@@ -4,124 +4,265 @@
   <meta charset="utf-8">
   <title>EDHオタクカード一覧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f913.png">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    :root { --footer-h: 64px; }
-    body { padding-bottom: var(--footer-h); }
-    .card-img-top { background: #f3f4f6; }
-    .card-title a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-    .meta a { text-decoration: underline; text-underline-offset: 2px; }
+    :root {
+      --hr-orange: #E8740C;
+      --hr-orange-light: #F5A623;
+      --hr-orange-bg: #FFF8F0;
+      --hr-dark: #2D2926;
+      --hr-warm-gray: #F5F0EB;
+      --hr-border: #E8D5C4;
+      --card-radius: 10px;
+    }
+    [data-bs-theme="dark"] {
+      --hr-orange-bg: #1a1410;
+      --hr-warm-gray: #2a2520;
+      --hr-border: #4a3f35;
+      --hr-dark: #1a1410;
+    }
+    body {
+      background: var(--hr-orange-bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    }
+    /* ヘッダー */
+    .site-header {
+      background: linear-gradient(135deg, var(--hr-orange), var(--hr-orange-light));
+    }
+    .site-header a { color: rgba(255,255,255,0.85); }
+    .site-header a:hover { color: #fff; }
+    /* カード */
+    .card {
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      border-color: var(--hr-border);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    [data-bs-theme="dark"] .card { background: var(--hr-warm-gray); border-color: var(--hr-border); }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+    .card-img-top { background: #f3f4f6; cursor: pointer; border-radius: var(--card-radius) var(--card-radius) 0 0; }
+    .card-title a { color: inherit; text-decoration: none; }
+    .card-title a:hover { text-decoration: underline; text-underline-offset: 2px; }
+    .meta a { text-decoration: none; color: var(--hr-orange); }
+    .meta a:hover { text-decoration: underline; }
+    /* 色ドット */
+    .color-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; text-align: center; font-size: 9px; line-height: 16px; color: #fff; font-weight: bold; vertical-align: middle; }
+    .color-dot-W { background: #F9D94A; color: #333; }
+    .color-dot-U { background: #0E68AB; }
+    .color-dot-B { background: #2B2B2B; }
+    .color-dot-R { background: #D32029; }
+    .color-dot-G { background: #00733E; }
+    .color-dot-C { background: #9E9E9E; }
+    /* 色フィルターボタン MTGカラー */
     #colorBox .col { padding-right: .25rem; padding-left: .25rem; }
-    .no-footer { padding-bottom: 0 !important; }
+    .btn-color { border: 2px solid #ccc; background: transparent; color: inherit; }
+    .btn-check:checked + .btn-color-W { background: #F9D94A; border-color: #F9D94A; color: #333; }
+    .btn-check:checked + .btn-color-U { background: #0E68AB; border-color: #0E68AB; color: #fff; }
+    .btn-check:checked + .btn-color-B { background: #2B2B2B; border-color: #2B2B2B; color: #fff; }
+    .btn-check:checked + .btn-color-R { background: #D32029; border-color: #D32029; color: #fff; }
+    .btn-check:checked + .btn-color-G { background: #00733E; border-color: #00733E; color: #fff; }
+    .btn-check:checked + .btn-color-C { background: #9E9E9E; border-color: #9E9E9E; color: #fff; }
+    /* お気に入り */
+    .fav-btn { cursor: pointer; font-size: 1.1rem; background: none; border: none; padding: 0 2px; line-height: 1; }
+    .fav-btn:hover { transform: scale(1.2); }
+    /* フィルターサマリー */
+    .filter-badge { font-size: 0.75rem; }
+    .filter-badge .btn-close { font-size: 0.5rem; margin-left: 4px; }
+    /* スケルトン */
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .skeleton { background: linear-gradient(90deg, #eee 25%, #ddd 50%, #eee 75%); background-size: 200%; animation: shimmer 1.5s infinite; border-radius: var(--card-radius); }
+    [data-bs-theme="dark"] .skeleton { background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%); background-size: 200%; animation: shimmer 1.5s infinite; }
+    .skeleton-card { aspect-ratio: 488/680; }
+    .skeleton-text { height: 12px; margin: 8px 8px 4px; border-radius: 4px; }
+    .skeleton-text-short { width: 60%; }
+    /* fadeIn */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeInUp 0.3s ease forwards; opacity: 0; }
+    /* モーダル */
+    #cardModal .modal-content { border-radius: 16px; overflow: hidden; }
+    #cardModal .modal-body { position: relative; }
+    .modal-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; z-index: 10; cursor: pointer; }
+    .modal-nav-btn:hover { background: rgba(0,0,0,0.7); }
+    .modal-nav-btn.prev { left: 8px; }
+    .modal-nav-btn.next { right: 8px; }
+    /* フッター */
+    .site-footer { background: var(--hr-dark); color: rgba(255,255,255,0.65); font-size: 11px; }
+    .site-footer a { color: rgba(255,255,255,0.8); text-decoration: underline; text-underline-offset: 2px; }
+    .site-footer a:hover { color: #fff; }
+    /* 更新インジケーター */
+    .update-indicator { font-size: 0.7rem; opacity: 0.8; }
+    /* Offcanvas */
+    .offcanvas-bottom { max-height: 80vh; }
   </style>
 </head>
 <body>
 
-  <header class="border-bottom sticky-top bg-white">
+  <!-- ===== ヘッダー ===== -->
+  <header class="site-header sticky-top shadow-sm">
     <div class="container py-2">
-      <h1 class="h6 m-0">EDHオタクカード画像一覧</h1>
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h5 m-0 text-white d-flex align-items-center gap-2">
+            ☀️ <span id="siteTitle">EDH オタクカード画像一覧</span>
+          </h1>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <span class="badge bg-dark bg-opacity-25" style="font-size:0.65rem;" id="unofficialBadge">非公式ファンサイト</span>
+            <span class="update-indicator text-white" id="updateStatus"></span>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <a href="https://soichirow.github.io/my-9-cards-mtg/index.html" class="btn btn-sm btn-outline-light" style="font-size:0.7rem;" target="_blank" rel="noopener" id="nineCardsLink">My 9 Cards</a>
+          <button id="langToggle" class="btn btn-sm text-white" style="font-size:0.85rem;">EN</button>
+          <button id="themeToggle" class="btn btn-sm text-white" aria-label="テーマ切替">🌙</button>
+        </div>
+      </div>
     </div>
   </header>
 
   <main class="container py-3">
-    <div class="row g-2 align-items-center mb-2">
-      <div class="col-12 col-md-4">
-        <input id="q" type="search" class="form-control" placeholder="カード名で検索（含む）">
-      </div>
-      <div class="col-6 col-md-3">
-        <select id="presenter" class="form-select">
-          <option value="">プレゼンター（すべて）</option>
-          <option>トロピ大塚</option>
-          <option>いってつ</option>
-          <option>スギちゃん</option>
-          <option>タイシン</option>
-          <option>タカノシゲキ</option>
-          <option>ソラノ</option>
-          <option>ブチャラティ</option>
-          <option>卍幻日輪廻卍のタイシン</option>
-          <option>その他</option>
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
-        <select id="sortKey" class="form-select">
-          <option value="none">ソートなし</option>
-          <option value="color">色（Identity）</option>
-          <option value="episode">話数</option>
-          <option value="cmc">マナ総量（CMC）</option>
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
-        <select id="sortDir" class="form-select">
-          <option value="asc">昇順</option>
-          <option value="desc">降順</option>
-        </select>
-      </div>
-    </div>
 
-    <div class="row g-2 mb-2" id="colorBox" aria-label="色で絞り込み（Color Identity）">
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cW" value="W" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cW">白</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cU" value="U" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cU">青</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cB" value="B" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cB">黒</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cR" value="R" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cR">赤</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cG" value="G" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cG">緑</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cC" value="C" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cC">無</label>
-      </div>
-    </div>
+    <!-- モバイルフィルターボタン -->
+    <button class="btn w-100 mb-2 d-md-none" style="background: var(--hr-orange); color: #fff;"
+            data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas" id="filterToggleBtn">
+      <span id="filterToggleLabel">フィルター</span> <span id="filterCount" class="badge bg-light text-dark d-none">0</span>
+    </button>
 
-    <div id="stat" class="text-muted small mb-2">loading...</div>
-    <div id="grid" class="row g-3">loading...</div>
-  </main>
+    <!-- フィルターパネル（デスクトップ用ラッパー） -->
+    <div id="filterDesktopSlot" class="d-none d-md-block">
+      <div id="filterPanel">
+        <!-- 検索 + フィルター -->
+        <div class="row g-2 align-items-center mb-2">
+          <div class="col-12 col-md-4">
+            <div class="input-group">
+              <input id="q" type="search" class="form-control" placeholder="" aria-label="検索">
+              <button class="btn btn-outline-secondary d-none" type="button" id="qClear" aria-label="クリア">&times;</button>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <select id="presenter" class="form-select">
+              <option value="" id="presAll">プレゼンター（すべて）</option>
+              <option>トロピ大塚</option>
+              <option>いってつ</option>
+              <option>スギちゃん</option>
+              <option>タイシン</option>
+              <option>タカノシゲキ</option>
+              <option>ソラノ</option>
+              <option>ブチャラティ</option>
+              <option>卍幻日輪廻卍のタイシン</option>
+              <option value="その他" id="presOther">その他</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <select id="sortKey" class="form-select">
+              <option value="none" id="sortNone">ソートなし</option>
+              <option value="color" id="sortColor">色（Identity）</option>
+              <option value="episode" id="sortEp">話数</option>
+              <option value="cmc" id="sortCmc">マナ総量（CMC）</option>
+            </select>
+          </div>
+          <div class="col-4 col-md-1">
+            <select id="sortDir" class="form-select">
+              <option value="asc" id="sortAsc">昇順</option>
+              <option value="desc" id="sortDesc">降順</option>
+            </select>
+          </div>
+          <div class="col-4 col-md-1">
+            <button class="btn btn-outline-warning w-100" id="favFilter" title="お気に入りのみ">★ <span id="favCount">0</span></button>
+          </div>
+          <div class="col-4 col-md-1">
+            <button class="btn btn-outline-secondary w-100" id="resetBtn" style="font-size:0.8rem;" title="リセット">&#x21bb;</button>
+          </div>
+        </div>
 
-  <nav id="footer" class="navbar bg-body-tertiary fixed-bottom border-top">
-    <div class="container py-1" style="height: 42px;">
-      <div class="d-flex w-100 justify-content-between align-items-center">
-        <button id="btnHideFooter"
-          class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-          style="width:24px; height:24px; padding:0;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1
-                     .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707
-                     5.354 11.354a.5.5 0 1 1-.708-.708L7.293 8 4.646 5.354a.5.5
-                     0 0 1 0-.708z"/>
-          </svg>
-        </button>
-        <div class="text-end" style="font-size:9px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-          連絡先：そういちろう
-          <a href="https://x.com/black777cat" target="_blank" rel="noopener" style="color:#666;">X</a> /
-          <a href="https://bsky.app/profile/black777cat.bsky.social" target="_blank" rel="noopener" style="color:#666;">bluesky</a> /
-          <a href="https://www.amazon.co.jp/hz/wishlist/ls/1Z0X9ZM1D65A7?ref_=wl_share" target="_blank" rel="noopener" style="color:#666;">ギフトを贈る</a>
-          このサイトはファンコンテンツ・ポリシーに沿った非公式のファンコンテンツです。
-          ウィザーズ社の認可/許諾は得ていません。
-          題材の一部に、ウィザーズ・オブ・ザ・コースト社の財産を含んでいます。
-          &copy; Wizards of the Coast LLC.
-          <a href="https://company.wizards.com/ja/legal/fancontentpolicy" target="_blank" rel="noopener" style="color:#666;">ポリシー</a>
+        <!-- 色フィルター -->
+        <div class="row g-2 mb-2" id="colorBox" aria-label="色で絞り込み">
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cW" value="W" autocomplete="off">
+            <label class="btn btn-color btn-color-W w-100" for="cW">白</label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cU" value="U" autocomplete="off">
+            <label class="btn btn-color btn-color-U w-100" for="cU">青</label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cB" value="B" autocomplete="off">
+            <label class="btn btn-color btn-color-B w-100" for="cB">黒</label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cR" value="R" autocomplete="off">
+            <label class="btn btn-color btn-color-R w-100" for="cR">赤</label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cG" value="G" autocomplete="off">
+            <label class="btn btn-color btn-color-G w-100" for="cG">緑</label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cC" value="C" autocomplete="off">
+            <label class="btn btn-color btn-color-C w-100" for="cC">無</label>
+          </div>
         </div>
       </div>
     </div>
-  </nav>
 
+    <!-- フィルターサマリー -->
+    <div id="filterSummary" class="d-flex flex-wrap gap-1 mb-2"></div>
+
+    <!-- 件数 -->
+    <div id="stat" class="text-muted small mb-2"></div>
+
+    <!-- グリッド -->
+    <div id="grid" class="row g-3"></div>
+  </main>
+
+  <!-- ===== モバイルフィルター Offcanvas ===== -->
+  <div class="offcanvas offcanvas-bottom" tabindex="-1" id="filterOffcanvas">
+    <div class="offcanvas-header" style="background: var(--hr-orange); color: #fff;">
+      <h5 class="offcanvas-title" id="offcanvasFilterTitle">フィルター</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body" id="filterMobileSlot"></div>
+  </div>
+
+  <!-- ===== カードモーダル ===== -->
+  <div class="modal fade" id="cardModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-body text-center p-0">
+          <button class="modal-nav-btn prev" id="modalPrev">&#10094;</button>
+          <img id="modalImg" class="img-fluid" style="max-height: 80vh; object-fit: contain;">
+          <button class="modal-nav-btn next" id="modalNext">&#10095;</button>
+        </div>
+        <div class="modal-footer flex-column align-items-start p-3" id="modalMeta"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== フッター ===== -->
+  <footer class="site-footer py-3 mt-4">
+    <div class="container">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+        <div>
+          <span id="footerContact">連絡先：そういちろう</span>
+          <a href="https://x.com/black777cat" target="_blank" rel="noopener">X</a> /
+          <a href="https://bsky.app/profile/black777cat.bsky.social" target="_blank" rel="noopener">Bluesky</a> /
+          <a href="https://www.amazon.co.jp/hz/wishlist/ls/1Z0X9ZM1D65A7?ref_=wl_share" target="_blank" rel="noopener" id="footerGift">ギフトを贈る</a>
+        </div>
+        <button class="btn btn-sm btn-outline-light" id="cacheClearBtn" style="font-size:0.65rem;" title="キャッシュクリア">🗑 <span id="cacheClearLabel">キャッシュクリア</span></button>
+      </div>
+      <p class="mb-0" style="font-size:10px; opacity:0.8;" id="footerDisclaimer">
+        このサイトはファンコンテンツ・ポリシーに沿った非公式のファンコンテンツです。
+        ウィザーズ社の認可/許諾は得ていません。
+        題材の一部に、ウィザーズ・オブ・ザ・コースト社の財産を含んでいます。
+        &copy; Wizards of the Coast LLC.
+        <a href="https://company.wizards.com/ja/legal/fancontentpolicy" target="_blank" rel="noopener" id="footerPolicy">ポリシー</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
-    // ===== card-utils.js のロジックをインポート風に埋め込み =====
-    // (GitHub Pagesはモジュール非対応のためインライン)
-
+    // ===== 定数 =====
     const KEY_IMG = '画像URL';
     const KEY_JA = 'カード名 (日本語)';
     const KEY_EN = 'カード名 (英語)';
@@ -133,22 +274,164 @@
     const KEY_SCRY = 'Scryfall';
     const KEY_THEME = 'テーマ';
     const KEY_COMM = '関連する統率者';
+    const MAIN_PRESENTERS = new Set(['トロピ大塚','いってつ','スギちゃん','タイシン','タカノシゲキ','ソラノ','ブチャラティ','卍幻日輪廻卍のタイシン']);
+    const COLOR_BG = { W:'#F9D94A', U:'#0E68AB', B:'#2B2B2B', R:'#D32029', G:'#00733E' };
+    const COLOR_ORDER = { W:1, U:2, B:3, R:4, G:5 };
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyB4dhlTnD6qjbiEszJ4r75hTHpKUSQ1Mxcqjy0mTZARxMMyzMwkAi5RkmAScV003dY8Q/exec?format=json&limit=3000';
+    const CACHE_KEY = 'edh-cards-cache';
+    const CACHE_TS_KEY = 'edh-cards-ts';
+    const CACHE_TTL = 3600000; // 1時間
+    const FAV_KEY = 'edh-favorites';
+    const LANG_KEY = 'edh-lang';
+    const THEME_KEY = 'edh-theme';
 
-    const MAIN_PRESENTERS = new Set([
-      'トロピ大塚', 'いってつ', 'スギちゃん', 'タイシン',
-      'タカノシゲキ', 'ソラノ', 'ブチャラティ', '卍幻日輪廻卍のタイシン',
-    ]);
+    // ===== i18n =====
+    const I18N = {
+      ja: {
+        siteTitle: 'EDH オタクカード画像一覧',
+        unofficial: '非公式ファンサイト',
+        filterBtn: 'フィルター',
+        searchPlaceholder: 'カード名で検索（含む）',
+        presAll: 'プレゼンター（すべて）',
+        presOther: 'その他',
+        sortNone: 'ソートなし',
+        sortColor: '色（Identity）',
+        sortEp: '話数',
+        sortCmc: 'マナ総量（CMC）',
+        sortAsc: '昇順',
+        sortDesc: '降順',
+        stat: (shown, total) => `表示: ${shown} / 全${total}`,
+        updating: '更新中...',
+        updated: '最新',
+        cacheCleared: 'キャッシュをクリアしました',
+        cacheLabel: 'キャッシュクリア',
+        contact: '連絡先：そういちろう',
+        gift: 'ギフトを贈る',
+        policy: 'ポリシー',
+        disclaimer: 'このサイトはファンコンテンツ・ポリシーに沿った非公式のファンコンテンツです。ウィザーズ社の認可/許諾は得ていません。題材の一部に、ウィザーズ・オブ・ザ・コースト社の財産を含んでいます。',
+        offcanvasTitle: 'フィルター',
+        fetchError: 'データ取得エラー',
+        retry: '再試行',
+        colorNames: { W:'白', U:'青', B:'黒', R:'赤', G:'緑', C:'無' },
+        langBtn: 'EN',
+        nineCards: 'My 9 Cards',
+      },
+      en: {
+        siteTitle: 'EDH Otaku Card Gallery',
+        unofficial: 'Unofficial Fan Site',
+        filterBtn: 'Filters',
+        searchPlaceholder: 'Search card name...',
+        presAll: 'Presenter (All)',
+        presOther: 'Other',
+        sortNone: 'No Sort',
+        sortColor: 'Color Identity',
+        sortEp: 'Episode',
+        sortCmc: 'CMC',
+        sortAsc: 'Ascending',
+        sortDesc: 'Descending',
+        stat: (shown, total) => `Showing: ${shown} / Total ${total}`,
+        updating: 'Updating...',
+        updated: 'Up to date',
+        cacheCleared: 'Cache cleared',
+        cacheLabel: 'Clear Cache',
+        contact: 'Contact: Soichiro',
+        gift: 'Send a Gift',
+        policy: 'Policy',
+        disclaimer: 'This is unofficial fan content per the Fan Content Policy. Not approved/endorsed by Wizards. Contains Wizards of the Coast properties.',
+        offcanvasTitle: 'Filters',
+        fetchError: 'Data fetch error',
+        retry: 'Retry',
+        colorNames: { W:'W', U:'U', B:'B', R:'R', G:'G', C:'C' },
+        langBtn: 'JA',
+        nineCards: 'My 9 Cards',
+      }
+    };
 
-    const s = (v) => String(v ?? '').trim();
+    let lang = localStorage.getItem(LANG_KEY) || new URLSearchParams(location.search).get('lang') || 'ja';
+    function t() { return I18N[lang] || I18N.ja; }
 
-    function getTitle(row) {
-      return s(row[KEY_JA]) || s(row[KEY_EN]) || 'カード';
+    function applyLang() {
+      const l = t();
+      document.documentElement.lang = lang;
+      document.title = l.siteTitle;
+      document.getElementById('siteTitle').textContent = l.siteTitle;
+      document.getElementById('unofficialBadge').textContent = l.unofficial;
+      document.getElementById('filterToggleLabel').textContent = l.filterBtn;
+      document.getElementById('q').placeholder = l.searchPlaceholder;
+      document.getElementById('presAll').textContent = l.presAll;
+      document.getElementById('presOther').textContent = l.presOther;
+      document.getElementById('sortNone').textContent = l.sortNone;
+      document.getElementById('sortColor').textContent = l.sortColor;
+      document.getElementById('sortEp').textContent = l.sortEp;
+      document.getElementById('sortCmc').textContent = l.sortCmc;
+      document.getElementById('sortAsc').textContent = l.sortAsc;
+      document.getElementById('sortDesc').textContent = l.sortDesc;
+      document.getElementById('offcanvasFilterTitle').textContent = l.offcanvasTitle;
+      document.getElementById('cacheClearLabel').textContent = l.cacheLabel;
+      document.getElementById('footerContact').textContent = l.contact;
+      document.getElementById('footerGift').textContent = l.gift;
+      document.getElementById('footerPolicy').textContent = l.policy;
+      document.getElementById('footerDisclaimer').firstChild.textContent = l.disclaimer + ' ';
+      document.getElementById('langToggle').textContent = l.langBtn;
+      document.getElementById('nineCardsLink').textContent = l.nineCards;
+      const cn = l.colorNames;
+      document.querySelector('label[for="cW"]').textContent = cn.W;
+      document.querySelector('label[for="cU"]').textContent = cn.U;
+      document.querySelector('label[for="cB"]').textContent = cn.B;
+      document.querySelector('label[for="cR"]').textContent = cn.R;
+      document.querySelector('label[for="cG"]').textContent = cn.G;
+      document.querySelector('label[for="cC"]').textContent = cn.C;
     }
+
+    // ===== ダークモード =====
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    document.getElementById('themeToggle').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-bs-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-bs-theme', next);
+      localStorage.setItem(THEME_KEY, next);
+      document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
+    });
+
+    // ===== 言語切替 =====
+    document.getElementById('langToggle').addEventListener('click', () => {
+      lang = lang === 'ja' ? 'en' : 'ja';
+      localStorage.setItem(LANG_KEY, lang);
+      applyLang();
+      if (ALL.length > 0) applyFilterSort();
+    });
+
+    // ===== お気に入り =====
+    let favorites = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
+    let favOnly = false;
+    function saveFavorites() {
+      localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
+      document.getElementById('favCount').textContent = favorites.size;
+    }
+    function toggleFav(cardName) {
+      if (favorites.has(cardName)) favorites.delete(cardName); else favorites.add(cardName);
+      saveFavorites();
+    }
+    function isFav(cardName) { return favorites.has(cardName); }
+    saveFavorites();
+
+    document.getElementById('favFilter').addEventListener('click', () => {
+      favOnly = !favOnly;
+      document.getElementById('favFilter').classList.toggle('btn-warning', favOnly);
+      document.getElementById('favFilter').classList.toggle('btn-outline-warning', !favOnly);
+      applyFilterSort();
+    });
+
+    // ===== ユーティリティ (card-utils.js と同じロジック) =====
+    const s = (v) => String(v ?? '').trim();
+    function getTitle(row) { return lang === 'en' ? (s(row[KEY_EN]) || s(row[KEY_JA]) || 'Card') : (s(row[KEY_JA]) || s(row[KEY_EN]) || 'カード'); }
     function getPresenterRaw(row) { return s(row[KEY_PRES]); }
     function getPresenterBucket(row) {
       const raw = getPresenterRaw(row);
       if (!raw) return '';
-      const parts = raw.split(/[,\u3001\/／・\s]+/).map(x => x.trim()).filter(Boolean);
+      const parts = raw.split(/[,\u3001/／・\s]+/).map(x => x.trim()).filter(Boolean);
       for (const p of parts) if (MAIN_PRESENTERS.has(p)) return p;
       return 'その他';
     }
@@ -167,11 +450,10 @@
       for (const c of have) if (!set.has(c)) return false;
       return true;
     }
-    const COLOR_ORDER = { 'W': 1, 'U': 2, 'B': 3, 'R': 4, 'G': 5 };
     function colorSortKey(row) {
       const have = ciSet(row);
       if (have.size === 0) return [0, 0, getTitle(row).toLowerCase()];
-      const seq = ['W', 'U', 'B', 'R', 'G'].filter(c => have.has(c));
+      const seq = ['W','U','B','R','G'].filter(c => have.has(c));
       return [COLOR_ORDER[seq[0]], seq.length, getTitle(row).toLowerCase()];
     }
     function toNum(v) {
@@ -180,19 +462,16 @@
       return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
     }
     function getCmc(row) {
-      const raw = row?.[KEY_CMC];
-      const str = String(raw ?? '').trim();
+      const str = String(row?.[KEY_CMC] ?? '').trim();
       if (str === '') return Number.POSITIVE_INFINITY;
       const n = Number(str);
       return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
     }
     function buildSearchText(row) {
       return [row[KEY_JA], row[KEY_EN], row[KEY_COMM], row[KEY_THEME]]
-        .flatMap(v => String(v ?? '').split(/[\s,、，\/／・]+/).filter(Boolean))
-        .map(x => x.toLowerCase())
-        .join(' ');
+        .flatMap(v => String(v ?? '').split(/[\s,、，/／・]+/).filter(Boolean))
+        .map(x => x.toLowerCase()).join(' ');
     }
-
     const toHttps = (u) => (typeof u === 'string' ? u.replace(/^http:\/\//i, 'https://') : '');
 
     // ===== DOM =====
@@ -201,77 +480,130 @@
     const grid = document.getElementById('grid');
     const stat = document.getElementById('stat');
 
+    // ===== スケルトン表示 =====
+    function showSkeletons() {
+      grid.innerHTML = '';
+      for (let i = 0; i < 12; i++) {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+        col.innerHTML = '<div class="card h-100"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text skeleton-text-short"></div></div>';
+        grid.appendChild(col);
+      }
+    }
+
+    // ===== 色ドット生成 =====
+    function colorDots(row) {
+      const have = ciSet(row);
+      if (have.size === 0) {
+        const dot = document.createElement('span');
+        dot.className = 'color-dot color-dot-C';
+        dot.textContent = 'C';
+        return [dot];
+      }
+      return ['W','U','B','R','G'].filter(c => have.has(c)).map(c => {
+        const dot = document.createElement('span');
+        dot.className = `color-dot color-dot-${c}`;
+        dot.textContent = c;
+        return dot;
+      });
+    }
+
     // ===== レンダリング =====
     function render(list) {
       grid.innerHTML = '';
       const frag = document.createDocumentFragment();
       let shown = 0;
 
-      for (const row of list) {
+      for (let idx = 0; idx < list.length; idx++) {
+        const row = list[idx];
         const url = s(row[KEY_IMG]);
         if (!url) continue;
         const title = getTitle(row);
+        const cardId = s(row[KEY_JA]) || s(row[KEY_EN]);
 
         const col = document.createElement('div');
         col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+        if (shown < 24) {
+          col.classList.add('fade-in');
+          col.style.animationDelay = (Math.min(shown, 20) * 25) + 'ms';
+        }
 
         const card = document.createElement('div');
         card.className = 'card h-100';
 
         const img = document.createElement('img');
         img.className = 'card-img-top';
-        img.loading = 'lazy';
+        img.loading = shown < 12 ? 'eager' : 'lazy';
         img.decoding = 'async';
         img.src = toHttps(url);
         img.alt = title;
+        img.dataset.idx = idx;
+        img.addEventListener('click', () => openModal(parseInt(img.dataset.idx)));
         img.onerror = function () { if (col.parentElement) col.remove(); };
 
         const body = document.createElement('div');
         body.className = 'card-body p-2';
 
+        // お気に入り + タイトル行
+        const titleRow = document.createElement('div');
+        titleRow.className = 'd-flex align-items-start gap-1';
+        const favBtn = document.createElement('button');
+        favBtn.className = 'fav-btn';
+        favBtn.textContent = isFav(cardId) ? '★' : '☆';
+        favBtn.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+        favBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFav(cardId);
+          favBtn.textContent = isFav(cardId) ? '★' : '☆';
+          favBtn.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+        });
         const titleEl = document.createElement('h3');
-        titleEl.className = 'card-title fs-6 mb-1';
+        titleEl.className = 'card-title fs-6 mb-0 flex-grow-1';
         const capLink = document.createElement('a');
         capLink.href = row[KEY_SCRY] || '#';
         capLink.target = '_blank';
         capLink.rel = 'noopener';
         capLink.textContent = title;
         titleEl.appendChild(capLink);
+        titleRow.append(favBtn, titleEl);
 
+        // メタ1: 色ドット + CMC + 話数
         const meta1 = document.createElement('div');
-        meta1.className = 'meta text-muted small';
-        const pres = getPresenterRaw(row);
-        const colors = Array.from(ciSet(row)).join('') || '無';
+        meta1.className = 'meta text-muted small mt-1 d-flex align-items-center gap-1 flex-wrap';
+        colorDots(row).forEach(d => meta1.appendChild(d));
+        const cmcVal = getCmc(row);
+        const cmcSpan = document.createElement('span');
+        cmcSpan.textContent = 'CMC:' + (Number.isFinite(cmcVal) ? cmcVal : '-');
+        meta1.appendChild(cmcSpan);
         const ep = s(row[KEY_EPISODE]);
-        let baseText = '';
-        if (pres) baseText += 'P:' + pres + ' / ';
-        baseText += '色:' + colors + ' / ';
-        baseText += 'CMC:' + (Number.isFinite(getCmc(row)) ? getCmc(row) : '-') + ' / ';
-        meta1.append(baseText);
         if (ep) {
           const epLink = document.createElement('a');
           epLink.href = row[KEY_YT] || '#';
           epLink.target = '_blank';
           epLink.rel = 'noopener';
-          epLink.textContent = ep + '話';
+          epLink.textContent = ep + (lang === 'en' ? 'ep' : '話');
           meta1.appendChild(epLink);
         }
 
+        // メタ2: プレゼンター + 晴れる屋リンク
         const meta2 = document.createElement('div');
         meta2.className = 'meta text-muted small';
+        const pres = getPresenterRaw(row);
+        if (pres) meta2.append(pres + ' ');
         if (row[KEY_COMM]) meta2.append('統:' + row[KEY_COMM] + ' ');
         const sun = document.createElement('a');
-        sun.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(title);
+        sun.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(s(row[KEY_JA]) || s(row[KEY_EN]));
         sun.target = '_blank';
         sun.rel = 'noopener';
         sun.textContent = '☀️';
+        sun.title = 'Hareruya';
         meta2.appendChild(sun);
         if (row[KEY_THEME]) {
-          const tags = String(row[KEY_THEME]).split(/[\s,、，\/／・#]+/).filter(Boolean);
-          if (tags.length) meta2.append(' ' + tags.map(t => '#' + t).join(''));
+          const tags = String(row[KEY_THEME]).split(/[\s,、，/／・#]+/).filter(Boolean);
+          if (tags.length) meta2.append(' ' + tags.map(t => '#' + t).join(' '));
         }
 
-        body.append(titleEl, meta1, meta2);
+        body.append(titleRow, meta1, meta2);
         card.append(img, body);
         col.appendChild(card);
         frag.appendChild(col);
@@ -279,7 +611,7 @@
       }
 
       grid.appendChild(frag);
-      stat.textContent = '表示: ' + shown + ' / 全' + ALL.length;
+      stat.textContent = t().stat(shown, ALL.length);
     }
 
     // ===== フィルタ + ソート =====
@@ -295,6 +627,10 @@
         if (q && !String(row._searchText || '').includes(q)) return false;
         if (presSel && presSel !== getPresenterBucket(row)) return false;
         if (!matchColorsCommander(row, checked)) return false;
+        if (favOnly) {
+          const cardId = s(row[KEY_JA]) || s(row[KEY_EN]);
+          if (!isFav(cardId)) return false;
+        }
         return true;
       });
 
@@ -323,45 +659,245 @@
       }
 
       render(view);
+      updateFilterSummary(q, presSel, checked);
+    }
+
+    // ===== フィルターサマリー =====
+    function updateFilterSummary(q, presSel, checked) {
+      const summary = document.getElementById('filterSummary');
+      summary.innerHTML = '';
+      let count = 0;
+
+      if (q) {
+        count++;
+        summary.appendChild(makeBadge('🔍 ' + q, () => { document.getElementById('q').value = ''; document.getElementById('qClear').classList.add('d-none'); applyFilterSort(); }));
+      }
+      if (presSel) {
+        count++;
+        summary.appendChild(makeBadge('P: ' + presSel, () => { document.getElementById('presenter').value = ''; applyFilterSort(); }));
+      }
+      checked.forEach(c => {
+        count++;
+        const cn = t().colorNames;
+        summary.appendChild(makeBadge(cn[c] || c, () => { document.getElementById('c' + c).checked = false; applyFilterSort(); }));
+      });
+      if (favOnly) {
+        count++;
+        summary.appendChild(makeBadge('★', () => { favOnly = false; document.getElementById('favFilter').classList.remove('btn-warning'); document.getElementById('favFilter').classList.add('btn-outline-warning'); applyFilterSort(); }));
+      }
+
+      const badge = document.getElementById('filterCount');
+      if (count > 0) { badge.textContent = count; badge.classList.remove('d-none'); }
+      else { badge.classList.add('d-none'); }
+    }
+
+    function makeBadge(text, onRemove) {
+      const span = document.createElement('span');
+      span.className = 'badge bg-secondary filter-badge d-flex align-items-center gap-1';
+      span.textContent = text;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-close btn-close-white';
+      btn.style.fontSize = '0.5rem';
+      btn.addEventListener('click', onRemove);
+      span.appendChild(btn);
+      return span;
     }
 
     // ===== イベント =====
-    let t;
-    const onChange = () => { clearTimeout(t); t = setTimeout(applyFilterSort, 120); };
-    document.getElementById('q').addEventListener('input', onChange);
+    let timer;
+    const onChange = () => { clearTimeout(timer); timer = setTimeout(applyFilterSort, 120); };
+    document.getElementById('q').addEventListener('input', (e) => {
+      document.getElementById('qClear').classList.toggle('d-none', !e.target.value);
+      onChange();
+    });
+    document.getElementById('qClear').addEventListener('click', () => {
+      document.getElementById('q').value = '';
+      document.getElementById('qClear').classList.add('d-none');
+      applyFilterSort();
+    });
     document.getElementById('presenter').addEventListener('change', onChange);
     document.getElementById('sortKey').addEventListener('change', onChange);
     document.getElementById('sortDir').addEventListener('change', onChange);
     document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el => el.addEventListener('change', onChange));
 
-    // ===== フッター表示/非表示 =====
-    const footer = document.getElementById('footer');
-    document.getElementById('btnHideFooter').addEventListener('click', () => {
-      if (footer.style.display !== 'none') {
-        footer.style.display = 'none';
-        document.body.classList.add('no-footer');
-      } else {
-        footer.style.display = '';
-        document.body.classList.remove('no-footer');
-      }
+    // リセットボタン
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('q').value = '';
+      document.getElementById('qClear').classList.add('d-none');
+      document.getElementById('presenter').value = '';
+      document.getElementById('sortKey').value = 'none';
+      document.getElementById('sortDir').value = 'asc';
+      document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el => { el.checked = false; });
+      favOnly = false;
+      document.getElementById('favFilter').classList.remove('btn-warning');
+      document.getElementById('favFilter').classList.add('btn-outline-warning');
+      applyFilterSort();
     });
 
-    // ===== データ取得（GAS JSON API） =====
-    const API_URL = 'https://script.google.com/macros/s/AKfycbyB4dhlTnD6qjbiEszJ4r75hTHpKUSQ1Mxcqjy0mTZARxMMyzMwkAi5RkmAScV003dY8Q/exec?format=json&limit=3000';
+    // ===== Offcanvas（モバイルフィルター）DOM移動 =====
+    const filterPanel = document.getElementById('filterPanel');
+    const desktopSlot = document.getElementById('filterDesktopSlot');
+    const mobileSlot = document.getElementById('filterMobileSlot');
+    const offcanvasEl = document.getElementById('filterOffcanvas');
 
-    try {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const rows = await res.json();
+    offcanvasEl.addEventListener('show.bs.offcanvas', () => {
+      mobileSlot.appendChild(filterPanel);
+    });
+    offcanvasEl.addEventListener('hidden.bs.offcanvas', () => {
+      desktopSlot.appendChild(filterPanel);
+    });
+
+    // ===== モーダル =====
+    let modalIdx = -1;
+    const cardModal = new bootstrap.Modal(document.getElementById('cardModal'));
+    const modalImg = document.getElementById('modalImg');
+    const modalMeta = document.getElementById('modalMeta');
+
+    function openModal(idx) {
+      if (idx < 0 || idx >= view.length) return;
+      modalIdx = idx;
+      const row = view[idx];
+      const title = getTitle(row);
+      const cardId = s(row[KEY_JA]) || s(row[KEY_EN]);
+      modalImg.src = toHttps(s(row[KEY_IMG]));
+      modalImg.alt = title;
+
+      modalMeta.innerHTML = '';
+
+      // お気に入り + タイトル
+      const h = document.createElement('div');
+      h.className = 'd-flex align-items-center gap-2 w-100';
+      const mFav = document.createElement('button');
+      mFav.className = 'fav-btn fs-4';
+      mFav.textContent = isFav(cardId) ? '★' : '☆';
+      mFav.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+      mFav.addEventListener('click', () => {
+        toggleFav(cardId);
+        mFav.textContent = isFav(cardId) ? '★' : '☆';
+        mFav.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+      });
+      const mTitle = document.createElement('a');
+      mTitle.href = row[KEY_SCRY] || '#';
+      mTitle.target = '_blank';
+      mTitle.rel = 'noopener';
+      mTitle.className = 'fs-5 fw-bold text-decoration-none';
+      mTitle.textContent = title;
+      h.append(mFav, mTitle);
+      modalMeta.appendChild(h);
+
+      // 詳細
+      const info = document.createElement('div');
+      info.className = 'small text-muted d-flex flex-wrap gap-2 align-items-center w-100 mt-1';
+      const pres = getPresenterRaw(row);
+      if (pres) { const sp = document.createElement('span'); sp.textContent = 'P: ' + pres; info.appendChild(sp); }
+      colorDots(row).forEach(d => info.appendChild(d));
+      const cmcVal = getCmc(row);
+      if (Number.isFinite(cmcVal)) { const sp = document.createElement('span'); sp.textContent = 'CMC: ' + cmcVal; info.appendChild(sp); }
+      const ep = s(row[KEY_EPISODE]);
+      if (ep) {
+        const epA = document.createElement('a');
+        epA.href = row[KEY_YT] || '#';
+        epA.target = '_blank';
+        epA.rel = 'noopener';
+        epA.textContent = ep + (lang === 'en' ? ' ep' : '話');
+        info.appendChild(epA);
+      }
+      if (row[KEY_COMM]) { const sp = document.createElement('span'); sp.textContent = '統: ' + row[KEY_COMM]; info.appendChild(sp); }
+      const sunA = document.createElement('a');
+      sunA.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(s(row[KEY_JA]) || s(row[KEY_EN]));
+      sunA.target = '_blank';
+      sunA.rel = 'noopener';
+      sunA.textContent = '☀️ Hareruya';
+      info.appendChild(sunA);
+      modalMeta.appendChild(info);
+
+      cardModal.show();
+    }
+
+    document.getElementById('modalPrev').addEventListener('click', () => openModal(modalIdx - 1));
+    document.getElementById('modalNext').addEventListener('click', () => openModal(modalIdx + 1));
+
+    // キーボードナビ
+    document.addEventListener('keydown', (e) => {
+      if (modalIdx < 0) return;
+      const modalEl = document.getElementById('cardModal');
+      if (!modalEl.classList.contains('show')) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); openModal(modalIdx - 1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); openModal(modalIdx + 1); }
+    });
+
+    // スワイプ
+    let touchStartX = 0;
+    const modalBody = document.querySelector('#cardModal .modal-body');
+    modalBody.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
+    modalBody.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) {
+        if (dx > 0) openModal(modalIdx - 1);
+        else openModal(modalIdx + 1);
+      }
+    }, { passive: true });
+
+    // ===== キャッシュクリアボタン =====
+    document.getElementById('cacheClearBtn').addEventListener('click', () => {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TS_KEY);
+      alert(t().cacheCleared);
+      location.reload();
+    });
+
+    // ===== データ取得（Stale-While-Revalidate） =====
+    function loadRows(rows) {
+      ALL.length = 0;
       rows.forEach(row => { row._searchText = buildSearchText(row); });
       ALL.push(...rows);
       applyFilterSort();
-    } catch (err) {
-      console.error(err);
-      grid.textContent = 'データ取得エラー: ' + err.message;
+    }
+
+    async function fetchFromAPI() {
+      const statusEl = document.getElementById('updateStatus');
+      statusEl.textContent = t().updating;
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const rows = await res.json();
+        localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
+        localStorage.setItem(CACHE_TS_KEY, String(Date.now()));
+        statusEl.textContent = t().updated;
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        return rows;
+      } catch (err) {
+        console.error('API fetch error:', err);
+        statusEl.textContent = '';
+        return null;
+      }
+    }
+
+    // 初期化
+    applyLang();
+    const cachedJson = localStorage.getItem(CACHE_KEY);
+    if (cachedJson) {
+      // キャッシュから即表示
+      try {
+        const cached = JSON.parse(cachedJson);
+        loadRows(cached);
+      } catch (e) {
+        console.error('Cache parse error:', e);
+        showSkeletons();
+      }
+      // バックグラウンドで最新を取得
+      fetchFromAPI().then(rows => { if (rows) loadRows(rows); });
+    } else {
+      // キャッシュなし → スケルトン表示してAPI取得
+      showSkeletons();
+      const rows = await fetchFromAPI();
+      if (rows) {
+        loadRows(rows);
+      } else {
+        grid.innerHTML = `<div class="col-12 text-center py-5"><p class="text-danger">${t().fetchError}</p><button class="btn btn-outline-primary" onclick="location.reload()">${t().retry}</button></div>`;
+      }
     }
   </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
