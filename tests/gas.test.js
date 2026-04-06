@@ -1,11 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   createMockSheet,
   createMockSpreadsheetApp,
   createMockUrlFetchApp,
   createMockUtilities,
   createMockContentService,
-  createMockHtmlService,
 } from './gas-mocks.js';
 import {
   convertISO8601ToTime,
@@ -16,7 +15,6 @@ import {
   createFetchOtakuVideos,
   createFetchJsonWithRetry,
   createDoGet,
-  createLogSearch,
   createSheetClass,
 } from './gas-adapter.js';
 
@@ -255,7 +253,7 @@ describe('Sheet class', () => {
 // ========================================
 // doGet（モック付き）
 // ========================================
-describe('doGet', () => {
+describe('doGet (JSON API)', () => {
   function setupDoGet() {
     const dbSheet = createMockSheet(
       ['名前', '色', 'CMC'],
@@ -263,50 +261,39 @@ describe('doGet', () => {
     );
     const SpreadsheetApp = createMockSpreadsheetApp({ 'データベース': dbSheet });
     const ContentService = createMockContentService();
-    const HtmlService = createMockHtmlService();
     const SheetClass = createSheetClass(SpreadsheetApp);
-    const logAccess_ = vi.fn();
 
     const { doGet, fetchDatabaseJson } = createDoGet({
       SpreadsheetApp,
       ContentService,
-      HtmlService,
       Sheet: SheetClass,
-      logAccess_,
       DB_SHEET_NAME: 'データベース',
     });
 
-    return { doGet, fetchDatabaseJson, logAccess_, ContentService };
+    return { doGet, fetchDatabaseJson };
   }
 
-  it('format=jsonでJSON文字列を返す', () => {
+  it('JSONレスポンスを返す', () => {
     const { doGet } = setupDoGet();
-    const result = doGet({ parameter: { format: 'json' } });
+    const result = doGet({ parameter: {} });
     expect(result._text).toBeDefined();
     const parsed = JSON.parse(result._text);
     expect(parsed).toHaveLength(2);
     expect(parsed[0]['名前']).toBe('Sol Ring');
   });
 
-  it('format=jsonでlimitが効く', () => {
+  it('limitパラメータが効く', () => {
     const { doGet } = setupDoGet();
-    const result = doGet({ parameter: { format: 'json', limit: '1' } });
+    const result = doGet({ parameter: { limit: '1' } });
     const parsed = JSON.parse(result._text);
     expect(parsed).toHaveLength(1);
   });
 
-  it('format指定なしでHTMLを返す', () => {
-    const { doGet, logAccess_ } = setupDoGet();
-    const result = doGet({ parameter: {} });
-    expect(result._type).toBe('html');
-    expect(logAccess_).toHaveBeenCalledOnce();
-  });
-
-  it('パラメータなしでもHTMLを返す', () => {
-    const { doGet, logAccess_ } = setupDoGet();
+  it('パラメータなしでもJSONを返す', () => {
+    const { doGet } = setupDoGet();
     const result = doGet(null);
-    expect(result._type).toBe('html');
-    expect(logAccess_).toHaveBeenCalled();
+    const parsed = JSON.parse(result._text);
+    expect(parsed).toHaveLength(2);
   });
 
   it('fetchDatabaseJsonのlimitは1-3000にクランプ', () => {
@@ -314,57 +301,11 @@ describe('doGet', () => {
     const r1 = JSON.parse(fetchDatabaseJson(0));
     expect(r1.length).toBeGreaterThanOrEqual(1);
     const r2 = JSON.parse(fetchDatabaseJson(99999));
-    expect(r2).toHaveLength(2); // データ2件しかないので2
+    expect(r2).toHaveLength(2);
   });
 });
 
-// ========================================
-// logSearch（モック付き）
-// ========================================
-describe('logSearch', () => {
-  it('2文字以上の検索語をログに記録する', () => {
-    const sheets = {};
-    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
-    const logSearch = createLogSearch(SpreadsheetApp, '検索ログ');
-
-    logSearch('テスト', { presenter: 'トロピ大塚', colors: ['W', 'U'] });
-
-    expect(sheets['検索ログ']).toBeDefined();
-    // ヘッダー + 1行 = 2行
-    expect(sheets['検索ログ']._data.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('1文字の検索語は無視する', () => {
-    const sheets = {};
-    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
-    const logSearch = createLogSearch(SpreadsheetApp, '検索ログ');
-
-    logSearch('あ');
-    expect(sheets['検索ログ']).toBeUndefined();
-  });
-
-  it('空文字は無視する', () => {
-    const sheets = {};
-    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
-    const logSearch = createLogSearch(SpreadsheetApp, '検索ログ');
-
-    logSearch('');
-    expect(sheets['検索ログ']).toBeUndefined();
-  });
-
-  it('100文字超は切り詰める', () => {
-    const sheets = {};
-    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
-    const logSearch = createLogSearch(SpreadsheetApp, '検索ログ');
-    const longTerm = 'あ'.repeat(200);
-
-    logSearch(longTerm);
-
-    const data = sheets['検索ログ']._data;
-    const lastRow = data[data.length - 1];
-    expect(lastRow[1].length).toBe(100);
-  });
-});
+// logSearch テストは削除（GAS版WebApp廃止、ログ機能不要）
 
 // ========================================
 // isOtakuCardVideo（純粋関数）

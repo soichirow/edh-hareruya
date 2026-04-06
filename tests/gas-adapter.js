@@ -131,9 +131,9 @@ export function createFetchJsonWithRetry(UrlFetchApp, Utilities) {
   };
 }
 
-// ===== doGet: JSON/HTMLモード分岐 =====
+// ===== doGet: JSON APIエンドポイント =====
 export function createDoGet(deps) {
-  const { SpreadsheetApp, ContentService, HtmlService, Sheet, logAccess_, DB_SHEET_NAME } = deps;
+  const { SpreadsheetApp, ContentService, Sheet, DB_SHEET_NAME } = deps;
 
   function fetchDatabaseJson(limit) {
     const max = Math.max(1, Math.min(Number(limit || 1000), 3000));
@@ -145,55 +145,14 @@ export function createDoGet(deps) {
   }
 
   function doGet(e) {
-    const format = (e && e.parameter && e.parameter.format) || '';
-
-    if (format === 'json') {
-      const limit = e.parameter.limit || 3000;
-      const json = fetchDatabaseJson(limit);
-      return ContentService
-        .createTextOutput(json)
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    logAccess_();
-    return HtmlService.createTemplateFromFile('Index')
-      .evaluate()
-      .setTitle('EDHオタクカード一覧')
-      .addMetaTag('viewport', 'width=device-width,initial-scale=1')
-      .setFaviconUrl('https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f913.png');
+    const limit = (e && e.parameter && e.parameter.limit) || 3000;
+    const json = fetchDatabaseJson(limit);
+    return ContentService
+      .createTextOutput(json)
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
   return { doGet, fetchDatabaseJson };
-}
-
-// ===== logSearch =====
-export function createLogSearch(SpreadsheetApp, SEARCH_LOG_SHEET) {
-  return function logSearch(term, meta = {}) {
-    try {
-      term = String(term || '').trim();
-      if (!term || term.length < 2) return;
-      if (term.length > 100) term = term.slice(0, 100);
-
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      let sh = ss.getSheetByName(SEARCH_LOG_SHEET);
-      if (!sh) {
-        sh = ss.insertSheet(SEARCH_LOG_SHEET);
-        sh.appendRow(['日時', '検索語', 'プレゼンター', '色(選択)', '備考']);
-        sh.setFrozenRows(1);
-      }
-
-      const row = [
-        new Date(),
-        term,
-        meta.presenter || '',
-        (meta.colors || []).join('') || '',
-        meta.note || '',
-      ];
-      sh.appendRow(row);
-    } catch (err) {
-      console.log('logSearch error: ' + err);
-    }
-  };
 }
 
 // ===== Sheet class (テスト用エクスポート) =====

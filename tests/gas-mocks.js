@@ -117,15 +117,4 @@ export function createMockContentService() {
   };
 }
 
-export function createMockHtmlService() {
-  return {
-    createTemplateFromFile: () => ({
-      evaluate: () => ({
-        setTitle: function () { return this; },
-        addMetaTag: function () { return this; },
-        setFaviconUrl: function () { return this; },
-        _type: 'html',
-      }),
-    }),
-  };
-}
+// HtmlService モックは廃止（GAS WebApp → GitHub Pages移行済み）
