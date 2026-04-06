@@ -151,8 +151,8 @@ export function createUpdateLatestVideos(deps) {
     });
 
     if (newRows.length > 0) {
-      const startRow = sheet.getLastRow() + 1;
-      sheet.getRange(startRow, 1, newRows.length, HEADER.length).setValues(newRows);
+      sheet.insertRowsAfter(1, newRows.length);
+      sheet.getRange(2, 1, newRows.length, HEADER.length).setValues(newRows);
     }
 
     if (Logger) Logger.log('新規追加: ' + newRows.length + '件');

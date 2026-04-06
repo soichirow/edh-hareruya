@@ -61,6 +61,11 @@ export function createMockSheet(headers = [], data = []) {
     getFormUrl: () => null,
     appendRow: (row) => { allValues.push([...row]); },
     clearContents: () => { allValues.length = 0; },
+    insertRowsAfter: (afterRow, howMany) => {
+      for (let i = 0; i < howMany; i++) {
+        allValues.splice(afterRow, 0, new Array(headers.length).fill(''));
+      }
+    },
     setFrozenRows: () => {},
     createTextFinder: (_str) => ({
       replaceAllWith: () => {},

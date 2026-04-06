@@ -165,8 +165,9 @@ function newUpdate() {
   });
 
   if (newRows.length > 0) {
-    const startRow = sheet.getLastRow() + 1;
-    sheet.getRange(startRow, 1, newRows.length, VIDEO_HEADER.length).setValues(newRows);
+    // ヘッダー直下（2行目）に空行を挿入して新しい動画を上に追加
+    sheet.insertRowsAfter(1, newRows.length);
+    sheet.getRange(2, 1, newRows.length, VIDEO_HEADER.length).setValues(newRows);
   }
 
   Logger.log('最新動画取得: 新規 ' + newRows.length + '件を「' + SHEET_NAME + '」に追加しました');
