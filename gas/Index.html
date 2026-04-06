@@ -1,196 +1,450 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <title>カード画像一覧</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Bootstrap 5 -->
+  <meta charset="utf-8">
+  <title>EDHオタクカード一覧</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    :root{ --footer-h: 64px; }
-    body { padding-bottom: var(--footer-h); }
-    /* 画像の安全枠だけ軽く */
-    .card-img-top { background:#f3f4f6; }
-    /* タイトルやメタ行の見た目 */
-    .card-title a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-    .meta a { text-decoration: underline; text-underline-offset: 2px; }
-    /* 色チップ（btn-check + label）をグリッドで折り返し */
+    :root {
+      --hr-orange: #E8740C;
+      --hr-orange-light: #F5A623;
+      --hr-orange-bg: #FFF8F0;
+      --hr-dark: #2D2926;
+      --hr-warm-gray: #F5F0EB;
+      --hr-border: #E8D5C4;
+      --card-radius: 10px;
+    }
+    [data-bs-theme="dark"] {
+      --hr-orange-bg: #1a1410;
+      --hr-warm-gray: #2a2520;
+      --hr-border: #4a3f35;
+      --hr-dark: #1a1410;
+    }
+    body {
+      background: var(--hr-orange-bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    }
+    /* ヘッダー */
+    .site-header {
+      background: linear-gradient(135deg, var(--hr-orange), var(--hr-orange-light));
+    }
+    .site-header a { color: rgba(255,255,255,0.85); }
+    .site-header a:hover { color: #fff; }
+    /* カード */
+    .card {
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      border-color: var(--hr-border);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    [data-bs-theme="dark"] .card { background: var(--hr-warm-gray); border-color: var(--hr-border); }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+    .card-img-top { background: #f3f4f6; cursor: pointer; border-radius: var(--card-radius) var(--card-radius) 0 0; }
+    .card-title a { color: inherit; text-decoration: none; }
+    .card-title a:hover { text-decoration: underline; text-underline-offset: 2px; }
+    .meta a { text-decoration: none; color: var(--hr-orange); }
+    .meta a:hover { text-decoration: underline; }
+    /* マナシンボル */
+    .mana-sym { display: inline-block; width: 16px; height: 16px; vertical-align: middle; }
+    /* 色フィルターボタン MTGカラー */
     #colorBox .col { padding-right: .25rem; padding-left: .25rem; }
-    /* フッターを隠した時に下余白も0へ */
-    .no-footer { padding-bottom: 0 !important; }
+    .btn-color { border: 2px solid #ccc; background: transparent; color: inherit; }
+    .btn-check:checked + .btn-color-W { background: #F9D94A; border-color: #F9D94A; color: #333; }
+    .btn-check:checked + .btn-color-U { background: #0E68AB; border-color: #0E68AB; color: #fff; }
+    .btn-check:checked + .btn-color-B { background: #2B2B2B; border-color: #2B2B2B; color: #fff; }
+    .btn-check:checked + .btn-color-R { background: #D32029; border-color: #D32029; color: #fff; }
+    .btn-check:checked + .btn-color-G { background: #00733E; border-color: #00733E; color: #fff; }
+    .btn-check:checked + .btn-color-C { background: #9E9E9E; border-color: #9E9E9E; color: #fff; }
+    /* お気に入り */
+    .fav-btn { cursor: pointer; font-size: 1.1rem; background: none; border: none; padding: 0 2px; line-height: 1; }
+    .fav-btn:hover { transform: scale(1.2); }
+    /* フィルターサマリー */
+    .filter-badge { font-size: 0.75rem; }
+    .filter-badge .btn-close { font-size: 0.5rem; margin-left: 4px; }
+    /* スケルトン */
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .skeleton { background: linear-gradient(90deg, #eee 25%, #ddd 50%, #eee 75%); background-size: 200%; animation: shimmer 1.5s infinite; border-radius: var(--card-radius); }
+    [data-bs-theme="dark"] .skeleton { background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%); background-size: 200%; animation: shimmer 1.5s infinite; }
+    .skeleton-card { aspect-ratio: 488/680; }
+    .skeleton-text { height: 12px; margin: 8px 8px 4px; border-radius: 4px; }
+    .skeleton-text-short { width: 60%; }
+    /* fadeIn */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeInUp 0.3s ease forwards; opacity: 0; }
+    /* モーダル */
+    #cardModal .modal-content { border-radius: 16px; overflow: hidden; }
+    #cardModal .modal-body { position: relative; }
+    .modal-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; z-index: 10; cursor: pointer; }
+    .modal-nav-btn:hover { background: rgba(0,0,0,0.7); }
+    .modal-nav-btn.prev { left: 8px; }
+    .modal-nav-btn.next { right: 8px; }
+    /* フッター */
+    .site-footer { background: var(--hr-dark); color: rgba(255,255,255,0.65); font-size: 11px; }
+    .site-footer a { color: rgba(255,255,255,0.8); text-decoration: underline; text-underline-offset: 2px; }
+    .site-footer a:hover { color: #fff; }
+    /* 更新インジケーター */
+    .update-indicator { font-size: 0.7rem; opacity: 0.8; }
+    /* Offcanvas */
+    .offcanvas-bottom { max-height: 80vh; }
   </style>
 </head>
 <body>
 
-  <!-- ヘッダー（必要なら文言を入れてOK） -->
-  <header class="border-bottom sticky-top bg-white">
+  <!-- ===== ヘッダー ===== -->
+  <header class="site-header sticky-top shadow-sm">
     <div class="container py-2">
-      <h1 class="h6 m-0">EDHオタクカード画像一覧</h1>
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h5 m-0 text-white d-flex align-items-center gap-2">
+            ☀️ <span id="siteTitle">EDH オタクカード画像一覧</span>
+          </h1>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <span class="badge bg-dark bg-opacity-25" style="font-size:0.65rem;" id="unofficialBadge">非公式ファンサイト</span>
+            <span class="update-indicator text-white" id="updateStatus"></span>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <a href="https://soichirow.github.io/my-9-cards-mtg/index.html" class="btn btn-sm btn-outline-light" style="font-size:0.7rem;" target="_blank" rel="noopener" id="nineCardsLink">My 9 Cards</a>
+          <button id="langToggle" class="btn btn-sm text-white" style="font-size:0.85rem;">EN</button>
+          <button id="themeToggle" class="btn btn-sm text-white" aria-label="テーマ切替">🌙</button>
+        </div>
+      </div>
     </div>
   </header>
 
   <main class="container py-3">
 
-    <!-- ツールバー -->
-    <div class="row g-2 align-items-center mb-2">
-      <div class="col-12 col-md-4">
-        <input id="q" type="search" class="form-control" placeholder="カード名で検索（含む）">
-      </div>
+    <!-- モバイルフィルターボタン -->
+    <button class="btn w-100 mb-2 d-md-none" style="background: var(--hr-orange); color: #fff;"
+            data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas" id="filterToggleBtn">
+      <span id="filterToggleLabel">フィルター</span> <span id="filterCount" class="badge bg-light text-dark d-none">0</span>
+    </button>
 
-      <div class="col-6 col-md-3">
-        <select id="presenter" class="form-select">
-          <option value="">プレゼンター（すべて）</option>
-          <option>トロピ大塚</option>
-          <option>いってつ</option>
-          <option>スギちゃん</option>
-          <option>タイシン</option>
-          <option>タカノシゲキ</option>
-          <option>ソラノ</option>
-          <option>ブチャラティ</option>
-          <option>卍幻日輪廻卍のタイシン</option>
-          <option>その他</option>
-        </select>
-      </div>
+    <!-- フィルターパネル（デスクトップ用ラッパー） -->
+    <div id="filterDesktopSlot" class="d-none d-md-block">
+      <div id="filterPanel">
+        <!-- 検索 + フィルター -->
+        <div class="row g-2 align-items-center mb-2">
+          <div class="col-12 col-md-4">
+            <div class="input-group">
+              <input id="q" type="search" class="form-control" placeholder="" aria-label="検索">
+              <button class="btn btn-outline-secondary d-none" type="button" id="qClear" aria-label="クリア">&times;</button>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <select id="presenter" class="form-select">
+              <option value="" id="presAll">プレゼンター（すべて）</option>
+              <option>トロピ大塚</option>
+              <option>いってつ</option>
+              <option>スギちゃん</option>
+              <option>タイシン</option>
+              <option>タカノシゲキ</option>
+              <option>ソラノ</option>
+              <option>ブチャラティ</option>
+              <option>卍幻日輪廻卍のタイシン</option>
+              <option value="その他" id="presOther">その他</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <select id="sortKey" class="form-select">
+              <option value="none" id="sortNone">ソートなし</option>
+              <option value="color" id="sortColor">色（Identity）</option>
+              <option value="episode" id="sortEp">話数</option>
+              <option value="cmc" id="sortCmc">マナ総量（CMC）</option>
+            </select>
+          </div>
+          <div class="col-4 col-md-1">
+            <select id="sortDir" class="form-select">
+              <option value="asc" id="sortAsc">昇順</option>
+              <option value="desc" id="sortDesc">降順</option>
+            </select>
+          </div>
+          <div class="col-4 col-md-1">
+            <button class="btn btn-outline-warning w-100" id="favFilter" title="お気に入りのみ">★ <span id="favCount">0</span></button>
+          </div>
+          <div class="col-4 col-md-1">
+            <button class="btn btn-outline-secondary w-100" id="resetBtn" style="font-size:0.8rem;" title="リセット">&#x21bb;</button>
+          </div>
+        </div>
 
-      <div class="col-6 col-md-2">
-        <select id="sortKey" class="form-select">
-          <option value="none">ソートなし</option>
-          <option value="color">色（Identity）</option>
-          <option value="episode">話数</option>
-          <option value="cmc">マナ総量（CMC）</option>
-        </select>
-      </div>
-
-      <div class="col-6 col-md-2">
-        <select id="sortDir" class="form-select">
-          <option value="asc">昇順</option>
-          <option value="desc">降順</option>
-        </select>
+        <!-- 色フィルター -->
+        <div class="row g-2 mb-2" id="colorBox" aria-label="色で絞り込み">
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cW" value="W" autocomplete="off">
+            <label class="btn btn-color btn-color-W w-100 d-flex align-items-center justify-content-center gap-1" for="cW"><img src="https://svgs.scryfall.io/card-symbols/W.svg" alt="W" width="18" height="18"> <span>白</span></label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cU" value="U" autocomplete="off">
+            <label class="btn btn-color btn-color-U w-100 d-flex align-items-center justify-content-center gap-1" for="cU"><img src="https://svgs.scryfall.io/card-symbols/U.svg" alt="U" width="18" height="18"> <span>青</span></label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cB" value="B" autocomplete="off">
+            <label class="btn btn-color btn-color-B w-100 d-flex align-items-center justify-content-center gap-1" for="cB"><img src="https://svgs.scryfall.io/card-symbols/B.svg" alt="B" width="18" height="18"> <span>黒</span></label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cR" value="R" autocomplete="off">
+            <label class="btn btn-color btn-color-R w-100 d-flex align-items-center justify-content-center gap-1" for="cR"><img src="https://svgs.scryfall.io/card-symbols/R.svg" alt="R" width="18" height="18"> <span>赤</span></label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cG" value="G" autocomplete="off">
+            <label class="btn btn-color btn-color-G w-100 d-flex align-items-center justify-content-center gap-1" for="cG"><img src="https://svgs.scryfall.io/card-symbols/G.svg" alt="G" width="18" height="18"> <span>緑</span></label>
+          </div>
+          <div class="col-4 col-sm-2">
+            <input type="checkbox" class="btn-check" id="cC" value="C" autocomplete="off">
+            <label class="btn btn-color btn-color-C w-100 d-flex align-items-center justify-content-center gap-1" for="cC"><img src="https://svgs.scryfall.io/card-symbols/C.svg" alt="C" width="18" height="18"> <span>無</span></label>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 色（btn-check + btn のチップ風、スマホでも崩れない） -->
-    <div class="row g-2 mb-2" id="colorBox" aria-label="色で絞り込み（Color Identity）">
-      <!-- 1色ずつ col で包む：JSは #colorBox input[type=checkbox] を見ているのでOK -->
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cW" value="W" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cW">白</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cU" value="U" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cU">青</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cB" value="B" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cB">黒</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cR" value="R" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cR">赤</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cG" value="G" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cG">緑</label>
-      </div>
-      <div class="col-4 col-sm-2">
-        <input type="checkbox" class="btn-check" id="cC" value="C" autocomplete="off">
-        <label class="btn btn-outline-secondary w-100" for="cC">無</label>
-      </div>
-    </div>
+    <!-- フィルターサマリー -->
+    <div id="filterSummary" class="d-flex flex-wrap gap-1 mb-2"></div>
 
     <!-- 件数 -->
-    <div id="stat" class="text-muted small mb-2">loading…</div>
+    <div id="stat" class="text-muted small mb-2"></div>
 
-    <!-- グリッド（Bootstrapのrow/colで） -->
-    <div id="grid" class="row g-3">loading…</div>
+    <!-- グリッド -->
+    <div id="grid" class="row g-3"></div>
+
+    <!-- もっと見るボタン -->
+    <div id="loadMoreWrap" class="text-center py-3 d-none">
+      <button id="loadMoreBtn" class="btn btn-outline-primary px-5" style="border-color: var(--hr-orange); color: var(--hr-orange);">
+        <span id="loadMoreLabel">もっと見る</span> (<span id="loadMoreRemaining">0</span>)
+      </button>
+    </div>
   </main>
 
-<!-- フッター（閉じるをアイコン化した版） -->
-<nav id="footer" class="navbar bg-body-tertiary fixed-bottom border-top">
-  <div class="container py-1" style="height: 42px;">
-    <div class="d-flex w-100 justify-content-between align-items-center">
+  <!-- ===== モバイルフィルター Offcanvas ===== -->
+  <div class="offcanvas offcanvas-bottom" tabindex="-1" id="filterOffcanvas">
+    <div class="offcanvas-header" style="background: var(--hr-orange); color: #fff;">
+      <h5 class="offcanvas-title" id="offcanvasFilterTitle">フィルター</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body" id="filterMobileSlot"></div>
+  </div>
 
-      <!-- ★ 閉じるボタンをアイコン化（×） -->
-      <button id="btnHideFooter"
-        class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-        style="width:24px; height:24px; padding:0;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-          viewBox="0 0 16 16">
-          <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 
-                   .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707 
-                   5.354 11.354a.5.5 0 1 1-.708-.708L7.293 8 4.646 5.354a.5.5 
-                   0 0 1 0-.708z"/>
-        </svg>
-      </button>
+  <!-- ===== カードモーダル ===== -->
+  <div class="modal fade" id="cardModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-body text-center p-0">
+          <button class="modal-nav-btn prev" id="modalPrev">&#10094;</button>
+          <img id="modalImg" class="img-fluid" style="max-height: 80vh; object-fit: contain;">
+          <button class="modal-nav-btn next" id="modalNext">&#10095;</button>
+        </div>
+        <div class="modal-footer flex-column align-items-start p-3" id="modalMeta"></div>
+      </div>
+    </div>
+  </div>
 
-      <!-- ★ 文言そのまま・1行・小さめ・控えめ -->
-      <div class="text-end"
-        style="
-          font-size:9px;
-          color:#666;
-          white-space:nowrap;
-          overflow:hidden;
-          text-overflow:ellipsis;
-        ">
-
-        連絡先：そういちろう　
-        <a href="https://x.com/black777cat" target="_blank" rel="noopener" style="color:#666;">X</a> /
-        <a href="https://bsky.app/profile/black777cat.bsky.social" target="_blank" rel="noopener" style="color:#666;">bluesky</a> /
-        <a href="https://www.amazon.co.jp/hz/wishlist/ls/1Z0X9ZM1D65A7?ref_=wl_share" target="_blank" rel="noopener" style="color:#666;">ギフトを贈る</a>　
+  <!-- ===== フッター ===== -->
+  <footer class="site-footer py-3 mt-4">
+    <div class="container">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+        <div>
+          <span id="footerContact">連絡先：そういちろう</span>
+          <a href="https://x.com/black777cat" target="_blank" rel="noopener">X</a> /
+          <a href="https://bsky.app/profile/black777cat.bsky.social" target="_blank" rel="noopener">Bluesky</a> /
+          <a href="https://www.amazon.co.jp/hz/wishlist/ls/1Z0X9ZM1D65A7?ref_=wl_share" target="_blank" rel="noopener" id="footerGift">ギフトを贈る</a>
+        </div>
+        <button class="btn btn-sm btn-outline-light" id="cacheClearBtn" style="font-size:0.65rem;" title="キャッシュクリア">🗑 <span id="cacheClearLabel">キャッシュクリア</span></button>
+      </div>
+      <p class="mb-1" style="font-size:10px; opacity:0.8;" id="footerDisclaimer">
         このサイトはファンコンテンツ・ポリシーに沿った非公式のファンコンテンツです。
         ウィザーズ社の認可/許諾は得ていません。
         題材の一部に、ウィザーズ・オブ・ザ・コースト社の財産を含んでいます。
-        © Wizards of the Coast LLC.
-        <a href="https://company.wizards.com/ja/legal/fancontentpolicy"
-          target="_blank" rel="noopener" style="color:#666;">ポリシー</a>
-
-      </div>
-
+        &copy; Wizards of the Coast LLC.
+        <a href="https://company.wizards.com/ja/legal/fancontentpolicy" target="_blank" rel="noopener" id="footerPolicy">ポリシー</a>
+      </p>
+      <p class="mb-0" style="font-size:10px; opacity:0.6;">
+        Card data &amp; images provided by <a href="https://scryfall.com/" target="_blank" rel="noopener">Scryfall API</a>.
+        Scryfall is not affiliated with this site.
+      </p>
     </div>
-  </div>
-</nav>
+  </footer>
 
-
-  <!-- ここからJS（既存ロジック流用） -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    const KEY_IMG       = '画像URL';
-    const KEY_JA        = 'カード名 (日本語)';
-    const KEY_EN        = 'カード名 (英語)';
-    const KEY_PRES      = 'プレゼンター';
-    const KEY_COLOR_ID  = 'Color Identity';
-    const KEY_EPISODE   = '話数';
-    const KEY_CMC       = 'CMC';
-    const KEY_YT        = '動画URL';
-    const KEY_SCRY      = 'Scryfall';
-    const KEY_THEME     = 'テーマ';
-    const KEY_COMM      = '関連する統率者';
-    const COMM_KEYS     = ['関連する統率者1','関連する統率者2', '関連カード'];
-
+    // GAS版: google.script.run でデータ取得
+    // ===== 定数 =====
+    const KEY_IMG = '画像URL';
+    const KEY_JA = 'カード名 (日本語)';
+    const KEY_EN = 'カード名 (英語)';
+    const KEY_PRES = 'プレゼンター';
+    const KEY_COLOR_ID = 'Color Identity';
+    const KEY_EPISODE = '話数';
+    const KEY_CMC = 'CMC';
+    const KEY_YT = '動画URL';
+    const KEY_SCRY = 'Scryfall';
+    const KEY_THEME = 'テーマ';
+    const KEY_COMM = '関連する統率者';
     const MAIN_PRESENTERS = new Set(['トロピ大塚','いってつ','スギちゃん','タイシン','タカノシゲキ','ソラノ','ブチャラティ','卍幻日輪廻卍のタイシン']);
+    const COLOR_BG = { W:'#F9D94A', U:'#0E68AB', B:'#2B2B2B', R:'#D32029', G:'#00733E' };
+    const COLOR_ORDER = { W:1, U:2, B:3, R:4, G:5 };
+    // GAS版ではfetch APIの代わりにgoogle.script.runを使用
+    const FAV_KEY = 'edh-favorites';
+    const LANG_KEY = 'edh-lang';
+    const THEME_KEY = 'edh-theme';
 
-    const ALL = [];
-    let view = [];
-    const grid = document.getElementById('grid');
-    const stat = document.getElementById('stat');
+    // ===== i18n =====
+    const I18N = {
+      ja: {
+        siteTitle: 'EDH オタクカード画像一覧',
+        unofficial: '非公式ファンサイト',
+        filterBtn: 'フィルター',
+        searchPlaceholder: 'カード名で検索（含む）',
+        presAll: 'プレゼンター（すべて）',
+        presOther: 'その他',
+        sortNone: 'ソートなし',
+        sortColor: '色（Identity）',
+        sortEp: '話数',
+        sortCmc: 'マナ総量（CMC）',
+        sortAsc: '昇順',
+        sortDesc: '降順',
+        stat: function(shown, total) { return '表示: ' + shown + ' / 全' + total; },
+        updating: '更新中...',
+        updated: '最新',
+        cacheCleared: 'キャッシュをクリアしました',
+        cacheLabel: 'キャッシュクリア',
+        contact: '連絡先：そういちろう',
+        gift: 'ギフトを贈る',
+        policy: 'ポリシー',
+        disclaimer: 'このサイトはファンコンテンツ・ポリシーに沿った非公式のファンコンテンツです。ウィザーズ社の認可/許諾は得ていません。題材の一部に、ウィザーズ・オブ・ザ・コースト社の財産を含んでいます。',
+        offcanvasTitle: 'フィルター',
+        fetchError: 'データ取得エラー',
+        retry: '再試行',
+        colorNames: { W:'白', U:'青', B:'黒', R:'赤', G:'緑', C:'無' },
+        langBtn: 'EN',
+        nineCards: 'My 9 Cards',
+      },
+      en: {
+        siteTitle: 'EDH Otaku Card Gallery',
+        unofficial: 'Unofficial Fan Site',
+        filterBtn: 'Filters',
+        searchPlaceholder: 'Search card name...',
+        presAll: 'Presenter (All)',
+        presOther: 'Other',
+        sortNone: 'No Sort',
+        sortColor: 'Color Identity',
+        sortEp: 'Episode',
+        sortCmc: 'CMC',
+        sortAsc: 'Ascending',
+        sortDesc: 'Descending',
+        stat: function(shown, total) { return 'Showing: ' + shown + ' / Total ' + total; },
+        updating: 'Updating...',
+        updated: 'Up to date',
+        cacheCleared: 'Cache cleared',
+        cacheLabel: 'Clear Cache',
+        contact: 'Contact: Soichiro',
+        gift: 'Send a Gift',
+        policy: 'Policy',
+        disclaimer: 'This is unofficial fan content per the Fan Content Policy. Not approved/endorsed by Wizards. Contains Wizards of the Coast properties.',
+        offcanvasTitle: 'Filters',
+        fetchError: 'Data fetch error',
+        retry: 'Retry',
+        colorNames: { W:'W', U:'U', B:'B', R:'R', G:'G', C:'C' },
+        langBtn: 'JA',
+        nineCards: 'My 9 Cards',
+      }
+    };
 
-    const toHttps = (u) => (typeof u === 'string' ? u.replace(/^http:\/\//i,'https://') : '');
+    let lang = localStorage.getItem(LANG_KEY) || new URLSearchParams(location.search).get('lang') || 'ja';
+    function t() { return I18N[lang] || I18N.ja; }
+
+    function applyLang() {
+      const l = t();
+      document.documentElement.lang = lang;
+      document.title = l.siteTitle;
+      document.getElementById('siteTitle').textContent = l.siteTitle;
+      document.getElementById('unofficialBadge').textContent = l.unofficial;
+      document.getElementById('filterToggleLabel').textContent = l.filterBtn;
+      document.getElementById('q').placeholder = l.searchPlaceholder;
+      document.getElementById('presAll').textContent = l.presAll;
+      document.getElementById('presOther').textContent = l.presOther;
+      document.getElementById('sortNone').textContent = l.sortNone;
+      document.getElementById('sortColor').textContent = l.sortColor;
+      document.getElementById('sortEp').textContent = l.sortEp;
+      document.getElementById('sortCmc').textContent = l.sortCmc;
+      document.getElementById('sortAsc').textContent = l.sortAsc;
+      document.getElementById('sortDesc').textContent = l.sortDesc;
+      document.getElementById('offcanvasFilterTitle').textContent = l.offcanvasTitle;
+      document.getElementById('cacheClearLabel').textContent = l.cacheLabel;
+      document.getElementById('footerContact').textContent = l.contact;
+      document.getElementById('footerGift').textContent = l.gift;
+      document.getElementById('footerPolicy').textContent = l.policy;
+      document.getElementById('footerDisclaimer').firstChild.textContent = l.disclaimer + ' ';
+      document.getElementById('langToggle').textContent = l.langBtn;
+      document.getElementById('nineCardsLink').textContent = l.nineCards;
+      const cn = l.colorNames;
+      document.querySelector('label[for="cW"] span').textContent = cn.W;
+      document.querySelector('label[for="cU"] span').textContent = cn.U;
+      document.querySelector('label[for="cB"] span').textContent = cn.B;
+      document.querySelector('label[for="cR"] span').textContent = cn.R;
+      document.querySelector('label[for="cG"] span').textContent = cn.G;
+      document.querySelector('label[for="cC"] span').textContent = cn.C;
+    }
+
+    // ===== ダークモード =====
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    document.getElementById('themeToggle').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-bs-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-bs-theme', next);
+      localStorage.setItem(THEME_KEY, next);
+      document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
+    });
+
+    // ===== 言語切替 =====
+    document.getElementById('langToggle').addEventListener('click', () => {
+      lang = lang === 'ja' ? 'en' : 'ja';
+      localStorage.setItem(LANG_KEY, lang);
+      applyLang();
+      if (ALL.length > 0) applyFilterSort();
+    });
+
+    // ===== お気に入り =====
+    let favorites = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
+    let favOnly = false;
+    function saveFavorites() {
+      localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
+      document.getElementById('favCount').textContent = favorites.size;
+    }
+    function toggleFav(cardName) {
+      if (favorites.has(cardName)) favorites.delete(cardName); else favorites.add(cardName);
+      saveFavorites();
+    }
+    function isFav(cardName) { return favorites.has(cardName); }
+    saveFavorites();
+
+    document.getElementById('favFilter').addEventListener('click', () => {
+      favOnly = !favOnly;
+      document.getElementById('favFilter').classList.toggle('btn-warning', favOnly);
+      document.getElementById('favFilter').classList.toggle('btn-outline-warning', !favOnly);
+      applyFilterSort();
+    });
+
+    // ===== ユーティリティ (card-utils.js と同じロジック) =====
     const s = (v) => String(v ?? '').trim();
-    function getTitle(row){ return s(row[KEY_JA]) || s(row[KEY_EN]) || 'カード'; }
-    function getPresenterRaw(row){ return s(row[KEY_PRES]); }
-    function getPresenterBucket(row){
+    function getTitle(row) { return lang === 'en' ? (s(row[KEY_EN]) || s(row[KEY_JA]) || 'Card') : (s(row[KEY_JA]) || s(row[KEY_EN]) || 'カード'); }
+    function getPresenterRaw(row) { return s(row[KEY_PRES]); }
+    function getPresenterBucket(row) {
       const raw = getPresenterRaw(row);
       if (!raw) return '';
-      const parts = raw.split(/[,\u3001\/／・\s]+/).map(x=>x.trim()).filter(Boolean);
+      const parts = raw.split(/[,\u3001/／・\s]+/).map(x => x.trim()).filter(Boolean);
       for (const p of parts) if (MAIN_PRESENTERS.has(p)) return p;
       return 'その他';
     }
-    function ciSet(row){
+    function ciSet(row) {
       const v = row[KEY_COLOR_ID];
-      if (Array.isArray(v)) return new Set(v.map(x=>String(x).toUpperCase()).filter(c=>'WUBRG'.includes(c)));
+      if (Array.isArray(v)) return new Set(v.map(x => String(x).toUpperCase()).filter(c => 'WUBRG'.includes(c)));
       const letters = String(v ?? '').toUpperCase().match(/[WUBRG]/g) || [];
       return new Set(letters);
     }
-    function matchColorsCommander(row, checked){
+    function matchColorsCommander(row, checked) {
       const set = new Set(checked);
       const have = ciSet(row);
       if (set.size === 0) return true;
@@ -199,104 +453,169 @@
       for (const c of have) if (!set.has(c)) return false;
       return true;
     }
-    const COLOR_ORDER = { 'W':1, 'U':2, 'B':3, 'R':4, 'G':5 };
-    function colorSortKey(row){
+    function colorSortKey(row) {
       const have = ciSet(row);
       if (have.size === 0) return [0, 0, getTitle(row).toLowerCase()];
-      const seq = ['W','U','B','R','G'].filter(c=>have.has(c));
-      const minRank = COLOR_ORDER[seq[0]];
-      return [minRank, seq.length, getTitle(row).toLowerCase()];
+      const seq = ['W','U','B','R','G'].filter(c => have.has(c));
+      return [COLOR_ORDER[seq[0]], seq.length, getTitle(row).toLowerCase()];
     }
-    function toNum(v){ if (typeof v === 'number') return v; const n = Number(String(v).replace(/[^\d.-]/g,'')); return Number.isFinite(n)?n:Number.NEGATIVE_INFINITY; }
-    function getCmc(row){
-      const raw = row?.[KEY_CMC];
-      const n = Number(String(raw ?? '').trim());
+    function toNum(v) {
+      if (typeof v === 'number') return v;
+      const n = Number(String(v).replace(/[^\d.-]/g, ''));
+      return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
+    }
+    function getCmc(row) {
+      const str = String(row?.[KEY_CMC] ?? '').trim();
+      if (str === '') return Number.POSITIVE_INFINITY;
+      const n = Number(str);
       return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
     }
-    // ★ Bootstrapカードで描画（row/colに合わせる）
-    function render(list){
+    function buildSearchText(row) {
+      return [row[KEY_JA], row[KEY_EN], row[KEY_COMM], row[KEY_THEME]]
+        .flatMap(v => String(v ?? '').split(/[\s,、，/／・]+/).filter(Boolean))
+        .map(x => x.toLowerCase()).join(' ');
+    }
+    const toHttps = (u) => (typeof u === 'string' ? u.replace(/^http:\/\//i, 'https://') : '');
+
+    // ===== DOM =====
+    const ALL = [];
+    let view = [];
+    const grid = document.getElementById('grid');
+    const stat = document.getElementById('stat');
+
+    // ===== スケルトン表示 =====
+    function showSkeletons() {
+      grid.innerHTML = '';
+      for (let i = 0; i < 12; i++) {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+        col.innerHTML = '<div class="card h-100"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text skeleton-text-short"></div></div>';
+        grid.appendChild(col);
+      }
+    }
+
+    // ===== マナシンボル生成（Scryfall SVG） =====
+    function manaIcon(color) {
+      const img = document.createElement('img');
+      img.className = 'mana-sym';
+      img.src = 'https://svgs.scryfall.io/card-symbols/' + color + '.svg';
+      img.alt = color;
+      img.width = 16;
+      img.height = 16;
+      return img;
+    }
+    function colorDots(row) {
+      const have = ciSet(row);
+      if (have.size === 0) return [manaIcon('C')];
+      return ['W','U','B','R','G'].filter(c => have.has(c)).map(c => manaIcon(c));
+    }
+
+    // ===== ページネーション =====
+    const PAGE_SIZE = 60;
+    let displayCount = PAGE_SIZE;
+
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+      displayCount += PAGE_SIZE;
+      render(view);
+    });
+
+    // ===== レンダリング =====
+    function render(list) {
       grid.innerHTML = '';
       const frag = document.createDocumentFragment();
       let shown = 0;
+      const limit = Math.min(displayCount, list.length);
 
-      for (let i = 0; i < list.length; i++){
-        const row = list[i];
+      for (let idx = 0; idx < limit; idx++) {
+        const row = list[idx];
         const url = s(row[KEY_IMG]);
         if (!url) continue;
-
         const title = getTitle(row);
+        const cardId = s(row[KEY_JA]) || s(row[KEY_EN]);
 
-        // col ラッパー
         const col = document.createElement('div');
         col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+        if (shown < 24) {
+          col.classList.add('fade-in');
+          col.style.animationDelay = (Math.min(shown, 20) * 25) + 'ms';
+        }
 
         const card = document.createElement('div');
         card.className = 'card h-100';
 
         const img = document.createElement('img');
         img.className = 'card-img-top';
-        img.loading = 'lazy';
+        img.loading = shown < 12 ? 'eager' : 'lazy';
         img.decoding = 'async';
         img.src = toHttps(url);
         img.alt = title;
-        img.onerror = function(){ if (col.parentElement) col.remove(); };
+        img.dataset.idx = idx;
+        img.addEventListener('click', () => openModal(parseInt(img.dataset.idx)));
+        img.onerror = function () { this.style.display = 'none'; };
 
         const body = document.createElement('div');
         body.className = 'card-body p-2';
 
-        // タイトル（Scryfallリンク）
+        // お気に入り + タイトル行
+        const titleRow = document.createElement('div');
+        titleRow.className = 'd-flex align-items-start gap-1';
+        const favBtn = document.createElement('button');
+        favBtn.className = 'fav-btn';
+        favBtn.textContent = isFav(cardId) ? '★' : '☆';
+        favBtn.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+        favBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFav(cardId);
+          favBtn.textContent = isFav(cardId) ? '★' : '☆';
+          favBtn.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+        });
         const titleEl = document.createElement('h3');
-        titleEl.className = 'card-title fs-6 mb-1';
+        titleEl.className = 'card-title fs-6 mb-0 flex-grow-1';
         const capLink = document.createElement('a');
-        const scryHref = row['Scryfall'] || row['Scryfall 画像URL'] || '#';
-        capLink.href = scryHref;
+        capLink.href = row[KEY_SCRY] || '#';
         capLink.target = '_blank';
         capLink.rel = 'noopener';
         capLink.textContent = title;
         titleEl.appendChild(capLink);
+        titleRow.append(favBtn, titleEl);
 
-        // メタ1: P / 色 / 話数(YouTube)
+        // メタ1: 色ドット + CMC + 話数
         const meta1 = document.createElement('div');
-        meta1.className = 'meta text-muted small';
-        const pres = getPresenterRaw(row);
-        const colors = Array.from(ciSet(row)).join('') || '無';
+        meta1.className = 'meta text-muted small mt-1 d-flex align-items-center gap-1 flex-wrap';
+        colorDots(row).forEach(d => meta1.appendChild(d));
+        const cmcVal = getCmc(row);
+        const cmcSpan = document.createElement('span');
+        cmcSpan.textContent = 'CMC:' + (Number.isFinite(cmcVal) ? cmcVal : '-');
+        meta1.appendChild(cmcSpan);
         const ep = s(row[KEY_EPISODE]);
-        let baseText = '';
-        if (pres) baseText += 'P:' + pres + ' / ';
-        baseText += '色:' + colors + ' / ';
-        baseText += 'CMC:' + (Number.isFinite(getCmc(row)) ? getCmc(row) : '-') + ' / ';
-        meta1.append(baseText);
-        if (ep){
+        if (ep) {
           const epLink = document.createElement('a');
-          epLink.href = row['動画URL'] || '#';
+          epLink.href = row[KEY_YT] || '#';
           epLink.target = '_blank';
           epLink.rel = 'noopener';
-          epLink.textContent = ep + '話';
+          epLink.textContent = ep + (lang === 'en' ? 'ep' : '話');
           meta1.appendChild(epLink);
         }
 
-        // メタ2: 統:○○ ☀️ #テーマ
+        // メタ2: プレゼンター + 晴れる屋リンク
         const meta2 = document.createElement('div');
         meta2.className = 'meta text-muted small';
-        if (row['関連する統率者']){
-          meta2.append('統:' + row['関連する統率者'] + ' ');
-        }
+        const pres = getPresenterRaw(row);
+        if (pres) meta2.append(pres + ' ');
+        if (row[KEY_COMM]) meta2.append('統:' + row[KEY_COMM] + ' ');
         const sun = document.createElement('a');
-        const qname = encodeURIComponent(title);
-        sun.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + qname;
+        sun.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(s(row[KEY_JA]) || s(row[KEY_EN]));
         sun.target = '_blank';
         sun.rel = 'noopener';
         sun.textContent = '☀️';
+        sun.title = 'Hareruya';
         meta2.appendChild(sun);
-        if (row['テーマ']){
-          // テーマを #タグ に（スペース区切りに見せる）
-          const tags = String(row['テーマ']).split(/[\s,、，\/／・#]+/).filter(Boolean);
-          if (tags.length){
-            meta2.append(' ' + tags.map(t => '#' + t).join(''));
-          }
+        if (row[KEY_THEME]) {
+          const tags = String(row[KEY_THEME]).split(/[\s,、，/／・#]+/).filter(Boolean);
+          if (tags.length) meta2.append(' ' + tags.map(t => '#' + t).join(' '));
         }
 
-        body.append(titleEl, meta1, meta2);
+        body.append(titleRow, meta1, meta2);
         card.append(img, body);
         col.appendChild(card);
         frag.appendChild(col);
@@ -304,109 +623,58 @@
       }
 
       grid.appendChild(frag);
-      stat.textContent = '表示: ' + shown + ' / 全' + ALL.length;
-    }
+      stat.textContent = t().stat(shown, ALL.length);
 
-    function getFirstNonEmpty(row, keys){
-      for (const k of keys){
-        if (row[k] != null && String(row[k]).trim() !== '') return String(row[k]).trim();
+      // もっと見るボタン
+      const remaining = list.length - limit;
+      const wrap = document.getElementById('loadMoreWrap');
+      if (remaining > 0) {
+        wrap.classList.remove('d-none');
+        document.getElementById('loadMoreRemaining').textContent = remaining;
+        document.getElementById('loadMoreLabel').textContent = lang === 'en' ? 'Load More' : 'もっと見る';
+      } else {
+        wrap.classList.add('d-none');
       }
-      return '';
-    }
-    function extractTags(val){
-      const v = String(val || '');
-      if (!v) return [];
-      return v.split(/[\s,、，\/／・#]+/).map(x=>x.trim()).filter(Boolean);
     }
 
-    let lastLoggedTerm = '';
-    let logTimer = null;
-
-    function scheduleLog(term) {
-      term = String(term || '').trim();
-      // 1) 空/短すぎは送らない 2) 前回と同じなら送らない
-      if (!term || term.length < 2 || term === lastLoggedTerm) return;
-
-      clearTimeout(logTimer);
-      logTimer = setTimeout(() => {
-        // 送信直前にもう一度チェック
-        if (!term || term.length < 2 || term === lastLoggedTerm) return;
-
-        // 送るメタデータ（軽量）
-        const presenter = document.getElementById('presenter').value || '';
-        const colors = [...document.querySelectorAll('#colorBox input[type="checkbox"]:checked')]
-                        .map(x => x.value); // 例: ['W','U']
-
-        google.script.run
-          .withSuccessHandler(() => { console.log('logged:', term); })
-          .withFailureHandler(err => { console.log('log failed:', err); })
-          .logSearch(term, { presenter, colors });
-
-        lastLoggedTerm = term;  // 送信済みにする
-      }, 2000); // 入力が止まって 2000ms 後に一回だけ送る
-    }
-    const normalize = (v) => String(v ?? '').toLowerCase().trim();
-
-    function buildSearchText(row){
-      // 検索対象：日本語名・英語名・関連する統率者1/2・関連カード・テーマ（お好み）
-      const fields = [
-        row[KEY_JA],
-        row[KEY_EN],
-        //...COMM_KEYS.map(k => row[k]),
-        row[KEY_COMM],
-        row[KEY_THEME],
-      ];
-      // 空を除外して連結 → 小文字化
-      return fields
-        .flatMap(v => {
-          // 「関連カード」がカンマ区切り等なら分割してもOK
-          const s = String(v ?? '');
-          return s.split(/[\s,、，\/／・]+/).filter(Boolean);
-        })
-        .map(x => x.toLowerCase())
-        .join(' ');
-    }
-    function applyFilterSort(){
+    // ===== フィルタ + ソート =====
+    function applyFilterSort(keepPage) {
+      if (!keepPage) displayCount = PAGE_SIZE;
       const q = s(document.getElementById('q').value).toLowerCase();
       const presSel = s(document.getElementById('presenter').value);
       const sortKey = document.getElementById('sortKey').value;
       const sortDir = document.getElementById('sortDir').value;
-      const checked = [...document.querySelectorAll('#colorBox input[type="checkbox"]:checked')].map(x=>x.value);
+      const checked = [...document.querySelectorAll('#colorBox input[type="checkbox"]:checked')].map(x => x.value);
+      const mul = (sortDir === 'desc') ? -1 : 1;
 
-      view = ALL.filter(row=>{
-        if (q){
-          // ★ ここを差し替え：_searchText を利用
-          if (!String(row._searchText || '').includes(q)) return false;
-        }
-        if (presSel){
-          const bucket = getPresenterBucket(row);
-          if (presSel !== bucket) return false;
-        }
+      view = ALL.filter(row => {
+        if (q && !String(row._searchText || '').includes(q)) return false;
+        if (presSel && presSel !== getPresenterBucket(row)) return false;
         if (!matchColorsCommander(row, checked)) return false;
+        if (favOnly) {
+          const cardId = s(row[KEY_JA]) || s(row[KEY_EN]);
+          if (!isFav(cardId)) return false;
+        }
         return true;
       });
 
-      const mul = (sortDir === 'desc') ? -1 : 1;
-      if (sortKey === 'color'){
-        view.sort((a,b)=>{
+      if (sortKey === 'color') {
+        view.sort((a, b) => {
           const aa = colorSortKey(a), bb = colorSortKey(b);
-          for (let i=0; i<Math.max(aa.length, bb.length); i++){
+          for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
             if (aa[i] === bb[i]) continue;
             return (aa[i] < bb[i] ? -1 : 1) * mul;
           }
           return 0;
         });
-      } else if (sortKey === 'episode'){
-        view.sort((a,b)=> (toNum(a[KEY_EPISODE]) - toNum(b[KEY_EPISODE])) * mul);
-      } else if (sortKey === 'cmc'){
+      } else if (sortKey === 'episode') {
+        view.sort((a, b) => (toNum(a[KEY_EPISODE]) - toNum(b[KEY_EPISODE])) * mul);
+      } else if (sortKey === 'cmc') {
         view.sort((a, b) => {
           const d = getCmc(a) - getCmc(b);
           if (d !== 0) return d * mul;
-
-          // ★ 同値なら colorSortKey で比較
-          const aa = colorSortKey(a);
-          const bb = colorSortKey(b);
-          for (let i=0; i<Math.max(aa.length, bb.length); i++){
+          const aa = colorSortKey(a), bb = colorSortKey(b);
+          for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
             if (aa[i] === bb[i]) continue;
             return (aa[i] < bb[i] ? -1 : 1) * mul;
           }
@@ -414,57 +682,216 @@
         });
       }
 
-
-
-
       render(view);
-      scheduleLog(q);
+      updateFilterSummary(q, presSel, checked);
     }
 
+    // ===== フィルターサマリー =====
+    function updateFilterSummary(q, presSel, checked) {
+      const summary = document.getElementById('filterSummary');
+      summary.innerHTML = '';
+      let count = 0;
 
-    // 入力イベント
-    let t; const onChange = ()=>{ clearTimeout(t); t = setTimeout(applyFilterSort, 120); };
-    document.getElementById('q').addEventListener('input', onChange);
+      if (q) {
+        count++;
+        summary.appendChild(makeBadge('🔍 ' + q, () => { document.getElementById('q').value = ''; document.getElementById('qClear').classList.add('d-none'); applyFilterSort(); }));
+      }
+      if (presSel) {
+        count++;
+        summary.appendChild(makeBadge('P: ' + presSel, () => { document.getElementById('presenter').value = ''; applyFilterSort(); }));
+      }
+      checked.forEach(c => {
+        count++;
+        const cn = t().colorNames;
+        summary.appendChild(makeBadge(cn[c] || c, () => { document.getElementById('c' + c).checked = false; applyFilterSort(); }));
+      });
+      if (favOnly) {
+        count++;
+        summary.appendChild(makeBadge('★', () => { favOnly = false; document.getElementById('favFilter').classList.remove('btn-warning'); document.getElementById('favFilter').classList.add('btn-outline-warning'); applyFilterSort(); }));
+      }
+
+      const badge = document.getElementById('filterCount');
+      if (count > 0) { badge.textContent = count; badge.classList.remove('d-none'); }
+      else { badge.classList.add('d-none'); }
+    }
+
+    function makeBadge(text, onRemove) {
+      const span = document.createElement('span');
+      span.className = 'badge bg-secondary filter-badge d-flex align-items-center gap-1';
+      span.textContent = text;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-close btn-close-white';
+      btn.style.fontSize = '0.5rem';
+      btn.addEventListener('click', onRemove);
+      span.appendChild(btn);
+      return span;
+    }
+
+    // ===== イベント =====
+    let timer;
+    const onChange = () => { clearTimeout(timer); timer = setTimeout(applyFilterSort, 120); };
+    document.getElementById('q').addEventListener('input', (e) => {
+      document.getElementById('qClear').classList.toggle('d-none', !e.target.value);
+      onChange();
+    });
+    document.getElementById('qClear').addEventListener('click', () => {
+      document.getElementById('q').value = '';
+      document.getElementById('qClear').classList.add('d-none');
+      applyFilterSort();
+    });
     document.getElementById('presenter').addEventListener('change', onChange);
     document.getElementById('sortKey').addEventListener('change', onChange);
     document.getElementById('sortDir').addEventListener('change', onChange);
-    document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el=> el.addEventListener('change', onChange));
-    document.getElementById('q').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') scheduleLog(e.currentTarget.value);
+    document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el => el.addEventListener('change', onChange));
+
+    // リセットボタン
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('q').value = '';
+      document.getElementById('qClear').classList.add('d-none');
+      document.getElementById('presenter').value = '';
+      document.getElementById('sortKey').value = 'none';
+      document.getElementById('sortDir').value = 'asc';
+      document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el => { el.checked = false; });
+      favOnly = false;
+      document.getElementById('favFilter').classList.remove('btn-warning');
+      document.getElementById('favFilter').classList.add('btn-outline-warning');
+      applyFilterSort();
     });
-    document.getElementById('q').addEventListener('blur', (e) => {
-      scheduleLog(e.currentTarget.value);
+
+    // ===== Offcanvas（モバイルフィルター）DOM移動 =====
+    const filterPanel = document.getElementById('filterPanel');
+    const desktopSlot = document.getElementById('filterDesktopSlot');
+    const mobileSlot = document.getElementById('filterMobileSlot');
+    const offcanvasEl = document.getElementById('filterOffcanvas');
+
+    offcanvasEl.addEventListener('show.bs.offcanvas', () => {
+      mobileSlot.appendChild(filterPanel);
+    });
+    offcanvasEl.addEventListener('hidden.bs.offcanvas', () => {
+      desktopSlot.appendChild(filterPanel);
     });
 
+    // ===== モーダル =====
+    let modalIdx = -1;
+    let cardModal = null;
+    try { cardModal = new bootstrap.Modal(document.getElementById('cardModal')); } catch(e) { console.warn('Modal init failed:', e); }
+    const modalImg = document.getElementById('modalImg');
+    const modalMeta = document.getElementById('modalMeta');
 
+    function openModal(idx) {
+      if (idx < 0 || idx >= view.length) return;
+      modalIdx = idx;
+      const row = view[idx];
+      const title = getTitle(row);
+      const cardId = s(row[KEY_JA]) || s(row[KEY_EN]);
+      modalImg.src = toHttps(s(row[KEY_IMG]));
+      modalImg.alt = title;
 
-    // 初期ロード（GAS）
-    google.script.run
-      .withSuccessHandler(text=>{
-        let rows=[]; 
-        try{ rows = JSON.parse(text); }catch(e){ console.error('JSON.parse失敗', e, text); }
-        // ★ ここで検索用テキストを計算して埋め込む（1回だけ）
-        rows.forEach(row => { row._searchText = buildSearchText(row); });
-        ALL.push(...rows);
-        applyFilterSort();
-      })
-      .withFailureHandler(err=>{ console.error(err); document.getElementById('grid').textContent = '取得エラー'; })
-      .fetchDatabaseJson(2000);
+      modalMeta.innerHTML = '';
 
-    // フッターの表示/非表示
-    const footer = document.getElementById('footer');
-    document.getElementById('btnHideFooter').addEventListener('click', ()=>{
-      if (footer.style.display !== 'none') {
-        footer.style.display = 'none';
-        document.body.classList.add('no-footer');
-      } else {
-        footer.style.display = '';
-        document.body.classList.remove('no-footer');
+      // お気に入り + タイトル
+      const h = document.createElement('div');
+      h.className = 'd-flex align-items-center gap-2 w-100';
+      const mFav = document.createElement('button');
+      mFav.className = 'fav-btn fs-4';
+      mFav.textContent = isFav(cardId) ? '★' : '☆';
+      mFav.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+      mFav.addEventListener('click', () => {
+        toggleFav(cardId);
+        mFav.textContent = isFav(cardId) ? '★' : '☆';
+        mFav.style.color = isFav(cardId) ? 'var(--hr-orange)' : '#ccc';
+      });
+      const mTitle = document.createElement('a');
+      mTitle.href = row[KEY_SCRY] || '#';
+      mTitle.target = '_blank';
+      mTitle.rel = 'noopener';
+      mTitle.className = 'fs-5 fw-bold text-decoration-none';
+      mTitle.textContent = title;
+      h.append(mFav, mTitle);
+      modalMeta.appendChild(h);
+
+      // 詳細
+      const info = document.createElement('div');
+      info.className = 'small text-muted d-flex flex-wrap gap-2 align-items-center w-100 mt-1';
+      const pres = getPresenterRaw(row);
+      if (pres) { const sp = document.createElement('span'); sp.textContent = 'P: ' + pres; info.appendChild(sp); }
+      colorDots(row).forEach(d => info.appendChild(d));
+      const cmcVal = getCmc(row);
+      if (Number.isFinite(cmcVal)) { const sp = document.createElement('span'); sp.textContent = 'CMC: ' + cmcVal; info.appendChild(sp); }
+      const ep = s(row[KEY_EPISODE]);
+      if (ep) {
+        const epA = document.createElement('a');
+        epA.href = row[KEY_YT] || '#';
+        epA.target = '_blank';
+        epA.rel = 'noopener';
+        epA.textContent = ep + (lang === 'en' ? ' ep' : '話');
+        info.appendChild(epA);
       }
-    });
-  </script>
+      if (row[KEY_COMM]) { const sp = document.createElement('span'); sp.textContent = '統: ' + row[KEY_COMM]; info.appendChild(sp); }
+      const sunA = document.createElement('a');
+      sunA.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(s(row[KEY_JA]) || s(row[KEY_EN]));
+      sunA.target = '_blank';
+      sunA.rel = 'noopener';
+      sunA.textContent = '☀️ Hareruya';
+      info.appendChild(sunA);
+      modalMeta.appendChild(info);
 
-  <!-- Bootstrap Bundle（必要なら） -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+      if (cardModal) cardModal.show();
+    }
+
+    document.getElementById('modalPrev').addEventListener('click', () => openModal(modalIdx - 1));
+    document.getElementById('modalNext').addEventListener('click', () => openModal(modalIdx + 1));
+
+    // キーボードナビ
+    document.addEventListener('keydown', (e) => {
+      if (modalIdx < 0) return;
+      const modalEl = document.getElementById('cardModal');
+      if (!modalEl.classList.contains('show')) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); openModal(modalIdx - 1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); openModal(modalIdx + 1); }
+    });
+
+    // スワイプ
+    let touchStartX = 0;
+    const modalBody = document.querySelector('#cardModal .modal-body');
+    modalBody.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
+    modalBody.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) {
+        if (dx > 0) openModal(modalIdx - 1);
+        else openModal(modalIdx + 1);
+      }
+    }, { passive: true });
+
+    // ===== キャッシュクリアボタン（GAS版: ページリロード） =====
+    document.getElementById('cacheClearBtn').addEventListener('click', () => {
+      location.reload();
+    });
+
+    // ===== データ取得（google.script.run） =====
+    function loadRows(rows) {
+      ALL.length = 0;
+      rows.forEach(row => { row._searchText = buildSearchText(row); });
+      ALL.push(...rows);
+      applyFilterSort();
+    }
+
+    // 初期化
+    applyLang();
+    showSkeletons();
+    google.script.run
+      .withSuccessHandler(function(text) {
+        var rows = [];
+        try { rows = JSON.parse(text); } catch(e) { console.error('JSON.parse失敗', e); }
+        loadRows(rows);
+        document.getElementById('updateStatus').textContent = '';
+      })
+      .withFailureHandler(function(err) {
+        console.error(err);
+        grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-danger">' + t().fetchError + '</p><button class="btn btn-outline-primary" onclick="location.reload()">' + t().retry + '</button></div>';
+      })
+      .fetchDatabaseJson(3000);
+  </script>
 </body>
 </html>
