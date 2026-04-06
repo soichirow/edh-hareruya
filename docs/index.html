@@ -173,27 +173,27 @@
         <div class="row g-2 mb-2" id="colorBox" aria-label="色で絞り込み">
           <div class="col-4 col-sm-2">
             <input type="checkbox" class="btn-check" id="cW" value="W" autocomplete="off">
-            <label class="btn btn-color btn-color-W w-100" for="cW">白</label>
+            <label class="btn btn-color btn-color-W w-100 d-flex align-items-center justify-content-center gap-1" for="cW"><img src="https://svgs.scryfall.io/card-symbols/W.svg" alt="W" width="18" height="18"> <span>白</span></label>
           </div>
           <div class="col-4 col-sm-2">
             <input type="checkbox" class="btn-check" id="cU" value="U" autocomplete="off">
-            <label class="btn btn-color btn-color-U w-100" for="cU">青</label>
+            <label class="btn btn-color btn-color-U w-100 d-flex align-items-center justify-content-center gap-1" for="cU"><img src="https://svgs.scryfall.io/card-symbols/U.svg" alt="U" width="18" height="18"> <span>青</span></label>
           </div>
           <div class="col-4 col-sm-2">
             <input type="checkbox" class="btn-check" id="cB" value="B" autocomplete="off">
-            <label class="btn btn-color btn-color-B w-100" for="cB">黒</label>
+            <label class="btn btn-color btn-color-B w-100 d-flex align-items-center justify-content-center gap-1" for="cB"><img src="https://svgs.scryfall.io/card-symbols/B.svg" alt="B" width="18" height="18"> <span>黒</span></label>
           </div>
           <div class="col-4 col-sm-2">
             <input type="checkbox" class="btn-check" id="cR" value="R" autocomplete="off">
-            <label class="btn btn-color btn-color-R w-100" for="cR">赤</label>
+            <label class="btn btn-color btn-color-R w-100 d-flex align-items-center justify-content-center gap-1" for="cR"><img src="https://svgs.scryfall.io/card-symbols/R.svg" alt="R" width="18" height="18"> <span>赤</span></label>
           </div>
           <div class="col-4 col-sm-2">
             <input type="checkbox" class="btn-check" id="cG" value="G" autocomplete="off">
-            <label class="btn btn-color btn-color-G w-100" for="cG">緑</label>
+            <label class="btn btn-color btn-color-G w-100 d-flex align-items-center justify-content-center gap-1" for="cG"><img src="https://svgs.scryfall.io/card-symbols/G.svg" alt="G" width="18" height="18"> <span>緑</span></label>
           </div>
           <div class="col-4 col-sm-2">
             <input type="checkbox" class="btn-check" id="cC" value="C" autocomplete="off">
-            <label class="btn btn-color btn-color-C w-100" for="cC">無</label>
+            <label class="btn btn-color btn-color-C w-100 d-flex align-items-center justify-content-center gap-1" for="cC"><img src="https://svgs.scryfall.io/card-symbols/C.svg" alt="C" width="18" height="18"> <span>無</span></label>
           </div>
         </div>
       </div>
@@ -380,12 +380,12 @@
       document.getElementById('langToggle').textContent = l.langBtn;
       document.getElementById('nineCardsLink').textContent = l.nineCards;
       const cn = l.colorNames;
-      document.querySelector('label[for="cW"]').textContent = cn.W;
-      document.querySelector('label[for="cU"]').textContent = cn.U;
-      document.querySelector('label[for="cB"]').textContent = cn.B;
-      document.querySelector('label[for="cR"]').textContent = cn.R;
-      document.querySelector('label[for="cG"]').textContent = cn.G;
-      document.querySelector('label[for="cC"]').textContent = cn.C;
+      document.querySelector('label[for="cW"] span').textContent = cn.W;
+      document.querySelector('label[for="cU"] span').textContent = cn.U;
+      document.querySelector('label[for="cB"] span').textContent = cn.B;
+      document.querySelector('label[for="cR"] span').textContent = cn.R;
+      document.querySelector('label[for="cG"] span').textContent = cn.G;
+      document.querySelector('label[for="cC"] span').textContent = cn.C;
     }
 
     // ===== ダークモード =====
