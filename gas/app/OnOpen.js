@@ -4,10 +4,10 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
-  ui.createMenu('カード管理ツール') // メニュー名
+  ui.createMenu('カード管理ツール')
     .addItem('Webアプリを開く', 'openWebApp')
-    .addItem('データ確認ログ', 'logDatabase')
     .addItem('最新動画取得', 'newUpdate')
+    .addItem('動画全件取得', 'searchOtakuCardVideosFromHareluya')
     .addItem('カードデータ取得', 'fetchMtgCardDataJa')
     .addToUi();
 }
@@ -17,5 +17,5 @@ function onOpen() {
  */
 function openWebApp() {
   const url = ScriptApp.getService().getUrl();
-  SpreadsheetApp.getUi().alert(`WebアプリURL:\n${url}`);
+  SpreadsheetApp.getUi().alert('WebアプリURL:\n' + url);
 }

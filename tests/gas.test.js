@@ -11,6 +11,9 @@ import {
   convertISO8601ToTime,
   getJoined,
   getImageNormal,
+  isOtakuCardVideo,
+  extractVideoData,
+  createFetchOtakuVideos,
   createFetchJsonWithRetry,
   createDoGet,
   createLogSearch,
@@ -360,5 +363,120 @@ describe('logSearch', () => {
     const data = sheets['検索ログ']._data;
     const lastRow = data[data.length - 1];
     expect(lastRow[1].length).toBe(100);
+  });
+});
+
+// ========================================
+// isOtakuCardVideo（純粋関数）
+// ========================================
+describe('isOtakuCardVideo', () => {
+  it('タイトルに「オタクカード」を含む通常動画はtrue', () => {
+    const item = { snippet: { title: '【MTG】EDHオタクカード184', liveBroadcastContent: 'none' } };
+    expect(isOtakuCardVideo(item)).toBe(true);
+  });
+
+  it('タイトルに「オタクカード」がなければfalse', () => {
+    const item = { snippet: { title: 'MTG開封動画', liveBroadcastContent: 'none' } };
+    expect(isOtakuCardVideo(item)).toBe(false);
+  });
+
+  it('ライブ配信はfalse', () => {
+    const item = { snippet: { title: 'EDHオタクカードLIVE', liveBroadcastContent: 'live' } };
+    expect(isOtakuCardVideo(item)).toBe(false);
+  });
+
+  it('liveBroadcastContentがnoneなら通す', () => {
+    const item = { snippet: { title: 'EDHオタクカード100', liveBroadcastContent: 'none' } };
+    expect(isOtakuCardVideo(item)).toBe(true);
+  });
+
+  it('liveBroadcastContentが未設定なら通す', () => {
+    const item = { snippet: { title: 'EDHオタクカード50' } };
+    expect(isOtakuCardVideo(item)).toBe(true);
+  });
+});
+
+// ========================================
+// extractVideoData（純粋関数）
+// ========================================
+describe('extractVideoData', () => {
+  const mockUtilities = createMockUtilities();
+
+  it('動画データを正しい配列形式で返す', () => {
+    const item = {
+      id: 'abc123',
+      snippet: {
+        title: 'EDHオタクカード184',
+        publishedAt: '2026-03-30T10:00:17Z',
+        thumbnails: { high: { url: 'https://i.ytimg.com/vi/abc123/hqdefault.jpg' } },
+      },
+      contentDetails: { duration: 'PT15M30S' },
+    };
+    const result = extractVideoData(item, mockUtilities);
+    expect(result).toHaveLength(7);
+    expect(result[0]).toBe('EDHオタクカード184');
+    expect(result[1]).toBe('abc123');
+    expect(result[4]).toBe('https://www.youtube.com/watch?v=abc123');
+    expect(result[6]).toBe('00:15:30');
+  });
+
+  it('サムネイルがない場合は空文字', () => {
+    const item = {
+      id: 'xyz',
+      snippet: { title: 'Test', publishedAt: '2026-01-01T00:00:00Z', thumbnails: {} },
+      contentDetails: { duration: 'PT5M' },
+    };
+    const result = extractVideoData(item, mockUtilities);
+    expect(result[5]).toBe('');
+  });
+});
+
+// ========================================
+// createFetchOtakuVideos（モック付き統合テスト）
+// ========================================
+describe('fetchOtakuVideos', () => {
+  function createMockYouTube(videoItems, hasNextPage) {
+    return {
+      Channels: {
+        list: () => ({ items: [{ contentDetails: { relatedPlaylists: { uploads: 'UU123' } } }] }),
+      },
+      PlaylistItems: {
+        list: () => ({
+          items: videoItems.map(v => ({ contentDetails: { videoId: v.id }, snippet: {} })),
+          nextPageToken: hasNextPage ? 'page2' : undefined,
+        }),
+      },
+      Videos: {
+        list: () => ({ items: videoItems }),
+      },
+    };
+  }
+
+  it('オタクカード動画をシートに書き込む', () => {
+    const sheets = {};
+    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
+    const mockItems = [
+      { id: 'v1', snippet: { title: 'EDHオタクカード1', publishedAt: '2026-01-01T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT10M' } },
+      { id: 'v2', snippet: { title: '普通の動画', publishedAt: '2026-01-02T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT5M' } },
+    ];
+    const YouTube = createMockYouTube(mockItems, false);
+    const fn = createFetchOtakuVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
+
+    const count = fn('テスト動画', false);
+    expect(count).toBe(1); // v1のみ（v2はタイトル不一致）
+    expect(sheets['テスト動画']).toBeDefined();
+  });
+
+  it('ライブ配信を除外する', () => {
+    const sheets = {};
+    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
+    const mockItems = [
+      { id: 'v1', snippet: { title: 'EDHオタクカードLIVE', publishedAt: '2026-01-01T00:00:00Z', liveBroadcastContent: 'live', thumbnails: {} }, contentDetails: { duration: 'PT60M' } },
+    ];
+    const YouTube = createMockYouTube(mockItems, false);
+    const fn = createFetchOtakuVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
+
+    const count = fn('テスト', false);
+    expect(count).toBe(0);
   });
 });

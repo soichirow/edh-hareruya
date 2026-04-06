@@ -39,6 +39,70 @@ export function convertISO8601ToTime(duration) {
   return `${hh}:${mm}:${ss}`;
 }
 
+// ===== YouTube動画フィルタ（純粋関数） =====
+export function isOtakuCardVideo(item) {
+  const title = item.snippet?.title || '';
+  if (!title.includes('オタクカード')) return false;
+  if (item.snippet?.liveBroadcastContent && item.snippet.liveBroadcastContent !== 'none') return false;
+  return true;
+}
+
+export function extractVideoData(item, Utilities) {
+  const title = item.snippet.title;
+  const videoId = item.id;
+  const publishedAtUTC = item.snippet.publishedAt;
+  const publishedDateJST = Utilities.formatDate(new Date(publishedAtUTC), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+  const url = 'https://www.youtube.com/watch?v=' + videoId;
+  const thumbnailUrl = item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '';
+  const durationISO = item.contentDetails?.duration || '';
+  const duration = convertISO8601ToTime(durationISO);
+  return [title, videoId, publishedAtUTC, publishedDateJST, url, thumbnailUrl, duration];
+}
+
+// ===== YouTube動画取得（モック対応） =====
+export function createFetchOtakuVideos(deps) {
+  const { SpreadsheetApp, YouTube, Utilities, Logger } = deps;
+  const CHANNEL_ID = 'UC1l7GtlvAmCOXRlxjImbWvw';
+  const HEADER = ['タイトル', '動画ID', '公開日(UTC)', '公開日(JST)', 'URL', 'サムネイルURL', '再生時間'];
+
+  return function fetchOtakuVideos(sheetName, allPages) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) { sheet = ss.insertSheet(sheetName); } else { sheet.clearContents(); }
+    sheet.appendRow(HEADER);
+
+    const channelResponse = YouTube.Channels.list('contentDetails', { id: CHANNEL_ID });
+    const uploadsPlaylistId = channelResponse.items[0].contentDetails.relatedPlaylists.uploads;
+
+    const videoData = [];
+    let nextPageToken = '';
+
+    do {
+      const playlistResponse = YouTube.PlaylistItems.list('snippet,contentDetails', {
+        playlistId: uploadsPlaylistId, maxResults: 50, pageToken: nextPageToken,
+      });
+      if (!playlistResponse.items) break;
+
+      const videoIds = playlistResponse.items.map(i => i.contentDetails.videoId).join(',');
+      const videoDetails = YouTube.Videos.list('contentDetails,snippet,liveStreamingDetails', { id: videoIds });
+
+      videoDetails.items.forEach(item => {
+        if (isOtakuCardVideo(item)) {
+          videoData.push(extractVideoData(item, Utilities));
+        }
+      });
+
+      nextPageToken = allPages ? playlistResponse.nextPageToken : '';
+    } while (nextPageToken);
+
+    if (videoData.length > 0) {
+      sheet.getRange(2, 1, videoData.length, 7).setValues(videoData);
+    }
+    if (Logger) Logger.log('「オタクカード」を含む動画 ' + videoData.length + '件を「' + sheetName + '」に出力しました。');
+    return videoData.length;
+  };
+}
+
 // ===== fetchJsonWithRetry_: リトライ付きfetch =====
 export function createFetchJsonWithRetry(UrlFetchApp, Utilities) {
   return function fetchJsonWithRetry_(url, fetchOptions, maxRetries) {
