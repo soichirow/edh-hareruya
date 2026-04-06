@@ -14,6 +14,17 @@ export function createMockSheet(headers = [], data = []) {
       if (args.length === 4) {
         const [row, col, numRows, numCols] = args;
         return {
+          getValues: () => {
+            const result = [];
+            for (let r = 0; r < numRows; r++) {
+              const rowData = [];
+              for (let c = 0; c < numCols; c++) {
+                rowData.push(allValues[row - 1 + r]?.[col - 1 + c] ?? '');
+              }
+              result.push(rowData);
+            }
+            return result;
+          },
           setValues: (vals) => {
             for (let r = 0; r < numRows; r++) {
               while (allValues.length <= row - 1 + r) allValues.push(new Array(headers.length).fill(''));

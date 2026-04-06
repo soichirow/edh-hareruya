@@ -113,8 +113,61 @@ function searchOtakuCardVideosFromHareluya() {
 }
 
 /**
- * 最新オタクカード動画を取得（メニュー: 最新動画取得）
+ * 最新動画の差分更新（メニュー: 最新動画取得）
+ * 「動画自動取得」シートに、まだ存在しない動画だけを追加する
  */
 function newUpdate() {
-  fetchOtakuVideos_('最新動画', false);
+  const SHEET_NAME = '動画自動取得';
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  const isNew = !sheet;
+
+  if (isNew) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(VIDEO_HEADER);
+  }
+
+  // 既存の動画IDを収集（2列目 = 動画ID）
+  const existingIds = {};
+  if (!isNew) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const ids = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+      for (let i = 0; i < ids.length; i++) {
+        if (ids[i][0]) existingIds[String(ids[i][0])] = true;
+      }
+    }
+  }
+
+  // YouTubeから最新50件取得
+  const channelResponse = YouTube.Channels.list('contentDetails', { id: HARERUYA_CHANNEL_ID });
+  const uploadsPlaylistId = channelResponse.items[0].contentDetails.relatedPlaylists.uploads;
+
+  const playlistResponse = YouTube.PlaylistItems.list('snippet,contentDetails', {
+    playlistId: uploadsPlaylistId,
+    maxResults: 50,
+    pageToken: '',
+  });
+
+  if (!playlistResponse.items) {
+    Logger.log('動画が取得できませんでした');
+    return;
+  }
+
+  const videoIds = playlistResponse.items.map(function(item) { return item.contentDetails.videoId; }).join(',');
+  const videoDetails = YouTube.Videos.list('contentDetails,snippet,liveStreamingDetails', { id: videoIds });
+
+  const newRows = [];
+  videoDetails.items.forEach(function(item) {
+    if (!isOtakuCardVideo_(item)) return;
+    if (existingIds[String(item.id)]) return;
+    newRows.push(extractVideoRow_(item));
+  });
+
+  if (newRows.length > 0) {
+    const startRow = sheet.getLastRow() + 1;
+    sheet.getRange(startRow, 1, newRows.length, VIDEO_HEADER.length).setValues(newRows);
+  }
+
+  Logger.log('最新動画取得: 新規 ' + newRows.length + '件を「' + SHEET_NAME + '」に追加しました');
 }

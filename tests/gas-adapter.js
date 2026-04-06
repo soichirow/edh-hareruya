@@ -103,6 +103,65 @@ export function createFetchOtakuVideos(deps) {
   };
 }
 
+// ===== 最新動画の差分更新 =====
+export function createUpdateLatestVideos(deps) {
+  const { SpreadsheetApp, YouTube, Utilities, Logger } = deps;
+  const CHANNEL_ID = 'UC1l7GtlvAmCOXRlxjImbWvw';
+  const SHEET_NAME = '動画自動取得';
+  const HEADER = ['タイトル', '動画ID', '公開日(UTC)', '公開日(JST)', 'URL', 'サムネイルURL', '再生時間'];
+  const VIDEO_ID_COL = 1; // 0-indexed: 動画ID は2列目
+
+  function updateLatestVideos() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_NAME);
+    const isNew = !sheet;
+    if (isNew) {
+      sheet = ss.insertSheet(SHEET_NAME);
+      sheet.appendRow(HEADER);
+    }
+
+    // 既存の動画IDを収集
+    const existingIds = new Set();
+    if (!isNew) {
+      const lastRow = sheet.getLastRow();
+      if (lastRow >= 2) {
+        const ids = sheet.getRange(2, VIDEO_ID_COL + 1, lastRow - 1, 1).getValues();
+        ids.forEach(function(r) { if (r[0]) existingIds.add(String(r[0])); });
+      }
+    }
+
+    // YouTubeから最新50件取得
+    const channelResponse = YouTube.Channels.list('contentDetails', { id: CHANNEL_ID });
+    const uploadsPlaylistId = channelResponse.items[0].contentDetails.relatedPlaylists.uploads;
+
+    const playlistResponse = YouTube.PlaylistItems.list('snippet,contentDetails', {
+      playlistId: uploadsPlaylistId, maxResults: 50, pageToken: '',
+    });
+
+    if (!playlistResponse.items) return 0;
+
+    const videoIds = playlistResponse.items.map(function(i) { return i.contentDetails.videoId; }).join(',');
+    const videoDetails = YouTube.Videos.list('contentDetails,snippet,liveStreamingDetails', { id: videoIds });
+
+    const newRows = [];
+    videoDetails.items.forEach(function(item) {
+      if (!isOtakuCardVideo(item)) return;
+      if (existingIds.has(String(item.id))) return;
+      newRows.push(extractVideoData(item, Utilities));
+    });
+
+    if (newRows.length > 0) {
+      const startRow = sheet.getLastRow() + 1;
+      sheet.getRange(startRow, 1, newRows.length, HEADER.length).setValues(newRows);
+    }
+
+    if (Logger) Logger.log('新規追加: ' + newRows.length + '件');
+    return newRows.length;
+  }
+
+  return { updateLatestVideos };
+}
+
 // ===== fetchJsonWithRetry_: リトライ付きfetch =====
 export function createFetchJsonWithRetry(UrlFetchApp, Utilities) {
   return function fetchJsonWithRetry_(url, fetchOptions, maxRetries) {

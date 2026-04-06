@@ -13,6 +13,7 @@ import {
   isOtakuCardVideo,
   extractVideoData,
   createFetchOtakuVideos,
+  createUpdateLatestVideos,
   createFetchJsonWithRetry,
   createDoGet,
   createSheetClass,
@@ -419,5 +420,81 @@ describe('fetchOtakuVideos', () => {
 
     const count = fn('テスト', false);
     expect(count).toBe(0);
+  });
+});
+
+// ========================================
+// updateLatestVideos（差分更新）
+// ========================================
+describe('updateLatestVideos', () => {
+  function createMockYouTube(videoItems) {
+    return {
+      Channels: {
+        list: () => ({ items: [{ contentDetails: { relatedPlaylists: { uploads: 'UU123' } } }] }),
+      },
+      PlaylistItems: {
+        list: () => ({
+          items: videoItems.map(v => ({ contentDetails: { videoId: v.id }, snippet: {} })),
+        }),
+      },
+      Videos: {
+        list: () => ({ items: videoItems }),
+      },
+    };
+  }
+
+  it('既存シートに新しい動画だけ追加する', () => {
+    const existingSheet = createMockSheet(
+      ['タイトル', '動画ID', '公開日(UTC)', '公開日(JST)', 'URL', 'サムネイルURL', '再生時間'],
+      [['EDHオタクカード1', 'old1', '2026-01-01', '', '', '', '']]
+    );
+    const sheets = { '動画自動取得': existingSheet };
+    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
+
+    const mockItems = [
+      { id: 'old1', snippet: { title: 'EDHオタクカード1', publishedAt: '2026-01-01T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT10M' } },
+      { id: 'new1', snippet: { title: 'EDHオタクカード2', publishedAt: '2026-04-01T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT15M' } },
+    ];
+    const YouTube = createMockYouTube(mockItems);
+
+    const { updateLatestVideos } = createUpdateLatestVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
+
+    const added = updateLatestVideos();
+    expect(added).toBe(1); // new1だけ追加
+  });
+
+  it('シートが存在しない場合は作成して全件追加', () => {
+    const sheets = {};
+    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
+
+    const mockItems = [
+      { id: 'v1', snippet: { title: 'EDHオタクカード1', publishedAt: '2026-01-01T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT10M' } },
+    ];
+    const YouTube = createMockYouTube(mockItems);
+
+    const { updateLatestVideos } = createUpdateLatestVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
+
+    const added = updateLatestVideos();
+    expect(added).toBe(1);
+    expect(sheets['動画自動取得']).toBeDefined();
+  });
+
+  it('全て既存なら0件追加', () => {
+    const existingSheet = createMockSheet(
+      ['タイトル', '動画ID', '公開日(UTC)', '公開日(JST)', 'URL', 'サムネイルURL', '再生時間'],
+      [['EDHオタクカード1', 'v1', '2026-01-01', '', '', '', '']]
+    );
+    const sheets = { '動画自動取得': existingSheet };
+    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
+
+    const mockItems = [
+      { id: 'v1', snippet: { title: 'EDHオタクカード1', publishedAt: '2026-01-01T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT10M' } },
+    ];
+    const YouTube = createMockYouTube(mockItems);
+
+    const { updateLatestVideos } = createUpdateLatestVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
+
+    const added = updateLatestVideos();
+    expect(added).toBe(0);
   });
 });
