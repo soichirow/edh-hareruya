@@ -497,4 +497,59 @@ describe('updateLatestVideos', () => {
     const added = updateLatestVideos();
     expect(added).toBe(0);
   });
+
+  it('新動画1本につきデータベースに4行挿入する', () => {
+    const videoSheet = createMockSheet(
+      ['タイトル', '動画ID', '公開日(UTC)', '公開日(JST)', 'URL', 'サムネイルURL', '再生時間'],
+      []
+    );
+    // データベースシート: 29列のヘッダー
+    const dbHeaders = ['動画タイトル','ID','公開日(UTC)','公開日(JST)','動画URL','サムネイルURL','再生時間','話数','紹介順','今のうちだぞ','プレゼンター','紹介カード','関連する統率者','関連する統率者2','関連カード','テーマ','上位互換？','カード名 (日本語)','カード名 (英語)','マナコスト','カードタイプ','オラクルテキスト','Power','Toughness','Colors','Color Identity','画像URL','Scryfall','CMC'];
+    const dbSheet = createMockSheet(dbHeaders, []);
+    const sheets = { '動画自動取得': videoSheet, 'データベース': dbSheet };
+    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
+
+    const mockItems = [
+      { id: 'new1', snippet: { title: '【MTG】EDHオタクカード200', publishedAt: '2026-04-06T10:00:00Z', liveBroadcastContent: 'none', thumbnails: { high: { url: 'https://example.com/thumb.jpg' } } }, contentDetails: { duration: 'PT15M' } },
+    ];
+    const YouTube = createMockYouTube(mockItems);
+    const { updateLatestVideos } = createUpdateLatestVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
+
+    const added = updateLatestVideos();
+    expect(added).toBe(1);
+
+    // データベースに4行追加されている（ヘッダー + 4行 = 5行）
+    const dbData = dbSheet._data;
+    expect(dbData.length).toBe(5); // header + 4 rows
+
+    // 各行の紹介順が1〜4
+    expect(dbData[1][8]).toBe(1); // 紹介順 = 9列目(0-indexed: 8)
+    expect(dbData[2][8]).toBe(2);
+    expect(dbData[3][8]).toBe(3);
+    expect(dbData[4][8]).toBe(4);
+
+    // 動画タイトル・話数が入っている
+    expect(dbData[1][0]).toBe('【MTG】EDHオタクカード200');
+    expect(dbData[1][7]).toBe(200); // 話数
+  });
+
+  it('話数をタイトルから自動抽出する', () => {
+    const videoSheet = createMockSheet(
+      ['タイトル', '動画ID', '公開日(UTC)', '公開日(JST)', 'URL', 'サムネイルURL', '再生時間'],
+      []
+    );
+    const dbHeaders = ['動画タイトル','ID','公開日(UTC)','公開日(JST)','動画URL','サムネイルURL','再生時間','話数','紹介順','今のうちだぞ','プレゼンター','紹介カード','関連する統率者','関連する統率者2','関連カード','テーマ','上位互換？','カード名 (日本語)','カード名 (英語)','マナコスト','カードタイプ','オラクルテキスト','Power','Toughness','Colors','Color Identity','画像URL','Scryfall','CMC'];
+    const dbSheet = createMockSheet(dbHeaders, []);
+    const sheets = { '動画自動取得': videoSheet, 'データベース': dbSheet };
+    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
+
+    const mockItems = [
+      { id: 'v1', snippet: { title: '【MTG】テスト【EDHオタクカード185】', publishedAt: '2026-04-06T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT10M' } },
+    ];
+    const YouTube = createMockYouTube(mockItems);
+    const { updateLatestVideos } = createUpdateLatestVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
+
+    updateLatestVideos();
+    expect(dbSheet._data[1][7]).toBe(185); // 話数
+  });
 });

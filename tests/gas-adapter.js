@@ -151,8 +151,41 @@ export function createUpdateLatestVideos(deps) {
     });
 
     if (newRows.length > 0) {
+      // 動画自動取得シートに挿入（上部）
       sheet.insertRowsAfter(1, newRows.length);
       sheet.getRange(2, 1, newRows.length, HEADER.length).setValues(newRows);
+
+      // データベースシートにも4行×新動画数を挿入
+      const dbSheet = ss.getSheetByName('データベース');
+      if (dbSheet) {
+        const ROWS_PER_VIDEO = 4;
+        const totalDbRows = newRows.length * ROWS_PER_VIDEO;
+        dbSheet.insertRowsAfter(1, totalDbRows);
+
+        const dbData = [];
+        for (let v = 0; v < newRows.length; v++) {
+          const videoRow = newRows[v];
+          // [タイトル, 動画ID, 公開日UTC, 公開日JST, URL, サムネイルURL, 再生時間]
+          const title = videoRow[0];
+          const episode = extractEpisodeNumber(title);
+
+          for (let r = 1; r <= ROWS_PER_VIDEO; r++) {
+            // 29列: 動画タイトル,ID,公開日UTC,公開日JST,動画URL,サムネイルURL,再生時間,話数,紹介順, 以降空欄
+            const row = new Array(29).fill('');
+            row[0] = videoRow[0]; // 動画タイトル
+            row[1] = videoRow[1]; // ID
+            row[2] = videoRow[2]; // 公開日UTC
+            row[3] = videoRow[3]; // 公開日JST
+            row[4] = videoRow[4]; // 動画URL
+            row[5] = videoRow[5]; // サムネイルURL
+            row[6] = videoRow[6]; // 再生時間
+            row[7] = episode;     // 話数
+            row[8] = r;           // 紹介順
+            dbData.push(row);
+          }
+        }
+        dbSheet.getRange(2, 1, totalDbRows, 29).setValues(dbData);
+      }
     }
 
     if (Logger) Logger.log('新規追加: ' + newRows.length + '件');
@@ -160,6 +193,12 @@ export function createUpdateLatestVideos(deps) {
   }
 
   return { updateLatestVideos };
+}
+
+/** タイトルから話数を抽出（例: "EDHオタクカード184" → 184） */
+export function extractEpisodeNumber(title) {
+  const match = title.match(/オタクカード(\d+)/);
+  return match ? parseInt(match[1], 10) : '';
 }
 
 // ===== fetchJsonWithRetry_: リトライ付きfetch =====
