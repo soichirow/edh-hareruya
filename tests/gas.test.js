@@ -12,7 +12,6 @@ import {
   getImageNormal,
   isOtakuCardVideo,
   extractVideoData,
-  createFetchOtakuVideos,
   createUpdateLatestVideos,
   createFetchJsonWithRetry,
   createDoGet,
@@ -374,57 +373,7 @@ describe('extractVideoData', () => {
 });
 
 // ========================================
-// createFetchOtakuVideos（モック付き統合テスト）
-// ========================================
-describe('fetchOtakuVideos', () => {
-  function createMockYouTube(videoItems, hasNextPage) {
-    return {
-      Channels: {
-        list: () => ({ items: [{ contentDetails: { relatedPlaylists: { uploads: 'UU123' } } }] }),
-      },
-      PlaylistItems: {
-        list: () => ({
-          items: videoItems.map(v => ({ contentDetails: { videoId: v.id }, snippet: {} })),
-          nextPageToken: hasNextPage ? 'page2' : undefined,
-        }),
-      },
-      Videos: {
-        list: () => ({ items: videoItems }),
-      },
-    };
-  }
-
-  it('オタクカード動画をシートに書き込む', () => {
-    const sheets = {};
-    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
-    const mockItems = [
-      { id: 'v1', snippet: { title: 'EDHオタクカード1', publishedAt: '2026-01-01T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT10M' } },
-      { id: 'v2', snippet: { title: '普通の動画', publishedAt: '2026-01-02T00:00:00Z', liveBroadcastContent: 'none', thumbnails: {} }, contentDetails: { duration: 'PT5M' } },
-    ];
-    const YouTube = createMockYouTube(mockItems, false);
-    const fn = createFetchOtakuVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
-
-    const count = fn('テスト動画', false);
-    expect(count).toBe(1); // v1のみ（v2はタイトル不一致）
-    expect(sheets['テスト動画']).toBeDefined();
-  });
-
-  it('ライブ配信を除外する', () => {
-    const sheets = {};
-    const SpreadsheetApp = createMockSpreadsheetApp(sheets);
-    const mockItems = [
-      { id: 'v1', snippet: { title: 'EDHオタクカードLIVE', publishedAt: '2026-01-01T00:00:00Z', liveBroadcastContent: 'live', thumbnails: {} }, contentDetails: { duration: 'PT60M' } },
-    ];
-    const YouTube = createMockYouTube(mockItems, false);
-    const fn = createFetchOtakuVideos({ SpreadsheetApp, YouTube, Utilities: createMockUtilities(), Logger: { log: () => {} } });
-
-    const count = fn('テスト', false);
-    expect(count).toBe(0);
-  });
-});
-
-// ========================================
-// updateLatestVideos（差分更新）
+// updateLatestVideos（差分更新 + データベース連携）
 // ========================================
 describe('updateLatestVideos', () => {
   function createMockYouTube(videoItems) {

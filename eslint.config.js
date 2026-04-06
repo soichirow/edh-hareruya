@@ -59,7 +59,7 @@ export default [
         convertISO8601ToTime: 'readonly',
         isOtakuCardVideo_: 'readonly',
         extractVideoRow_: 'readonly',
-        fetchOtakuVideos_: 'readonly',
+        extractEpisodeNumber_: 'readonly',
         getJoined: 'readonly',
         getImageNormal: 'readonly',
         findCardPreferJa: 'readonly',

@@ -55,64 +55,6 @@ function convertISO8601ToTime(duration) {
 }
 
 /**
- * オタクカード動画を取得してシートに書き込む（共通処理）
- * @param {string} sheetName - 出力先シート名
- * @param {boolean} allPages - true: 全ページ取得、false: 最新50件のみ
- * @return {number} 取得件数
- */
-function fetchOtakuVideos_(sheetName, allPages) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-  } else {
-    sheet.clearContents();
-  }
-  sheet.appendRow(VIDEO_HEADER);
-
-  const channelResponse = YouTube.Channels.list('contentDetails', { id: HARERUYA_CHANNEL_ID });
-  const uploadsPlaylistId = channelResponse.items[0].contentDetails.relatedPlaylists.uploads;
-
-  const videoData = [];
-  let nextPageToken = '';
-
-  do {
-    const playlistResponse = YouTube.PlaylistItems.list('snippet,contentDetails', {
-      playlistId: uploadsPlaylistId,
-      maxResults: 50,
-      pageToken: nextPageToken,
-    });
-
-    if (!playlistResponse.items) break;
-
-    const videoIds = playlistResponse.items.map(function(item) { return item.contentDetails.videoId; }).join(',');
-    const videoDetails = YouTube.Videos.list('contentDetails,snippet,liveStreamingDetails', { id: videoIds });
-
-    videoDetails.items.forEach(function(item) {
-      if (isOtakuCardVideo_(item)) {
-        videoData.push(extractVideoRow_(item));
-      }
-    });
-
-    nextPageToken = allPages ? playlistResponse.nextPageToken : '';
-  } while (nextPageToken);
-
-  if (videoData.length > 0) {
-    sheet.getRange(2, 1, videoData.length, 7).setValues(videoData);
-  }
-
-  Logger.log('「オタクカード」を含む動画 ' + videoData.length + '件を「' + sheetName + '」に出力しました。');
-  return videoData.length;
-}
-
-/**
- * 全オタクカード動画を取得（メニュー: 動画全件取得）
- */
-function searchOtakuCardVideosFromHareluya() {
-  fetchOtakuVideos_('動画自動取得', true);
-}
-
-/**
  * 最新動画の差分更新（メニュー: 最新動画取得）
  * 「動画自動取得」シートに、まだ存在しない動画だけを追加する
  */
