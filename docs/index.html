@@ -282,6 +282,14 @@
     const MAIN_PRESENTERS = new Set(['トロピ大塚','いってつ','スギちゃん','タイシン','タカノシゲキ','ソラノ','ブチャラティ','卍幻日輪廻卍のタイシン']);
     const COLOR_BG = { W:'#F9D94A', U:'#0E68AB', B:'#2B2B2B', R:'#D32029', G:'#00733E' };
     const COLOR_ORDER = { W:1, U:2, B:3, R:4, G:5 };
+    const COLOR_TOKEN_MAP = {
+      W: 'W', WHITE: 'W', '白': 'W',
+      U: 'U', BLUE: 'U', '青': 'U',
+      B: 'B', BLACK: 'B', '黒': 'B',
+      R: 'R', RED: 'R', '赤': 'R',
+      G: 'G', GREEN: 'G', '緑': 'G',
+      C: 'C', COLORLESS: 'C', COLOURLESS: 'C', '無色': 'C', '無': 'C',
+    };
     const API_URL = 'https://script.google.com/macros/s/AKfycbyB4dhlTnD6qjbiEszJ4r75hTHpKUSQ1Mxcqjy0mTZARxMMyzMwkAi5RkmAScV003dY8Q/exec?format=json&limit=3000';
     const CACHE_KEY = 'edh-cards-cache';
     const CACHE_TS_KEY = 'edh-cards-ts';
@@ -442,16 +450,24 @@
     }
     function ciSet(row) {
       const v = row[KEY_COLOR_ID];
-      if (Array.isArray(v)) return new Set(v.map(x => String(x).toUpperCase()).filter(c => 'WUBRG'.includes(c)));
-      const letters = String(v ?? '').toUpperCase().match(/[WUBRG]/g) || [];
-      return new Set(letters);
+      const rawTokens = Array.isArray(v)
+        ? v
+        : String(v ?? '')
+          .replace(/[[\]{}'"]/g, '')
+          .split(/[\s,;/|、，・]+/)
+          .flatMap(token => /^[WUBRGC]+$/i.test(token) ? token.toUpperCase().split('') : [token]);
+      const colors = rawTokens
+        .map(token => COLOR_TOKEN_MAP[String(token ?? '').trim().toUpperCase()] || '')
+        .filter(color => color && color !== 'C');
+      return new Set(colors);
     }
     function matchColorsCommander(row, checked) {
       const set = new Set(checked);
       const have = ciSet(row);
       if (set.size === 0) return true;
-      if (set.size === 1 && set.has('C')) return have.size === 0;
-      if (set.has('C')) set.delete('C');
+      if (have.size === 0) return set.has('C');
+      set.delete('C');
+      if (set.size === 0) return false;
       for (const c of have) if (!set.has(c)) return false;
       return true;
     }

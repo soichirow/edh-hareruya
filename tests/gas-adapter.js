@@ -23,6 +23,20 @@ export function getImageNormal(card) {
   return '';
 }
 
+export function findImageCardPreferEn(card, fetchOptions, fetchJsonWithRetry_) {
+  const name = (card && card.name ? card.name : '').toString().trim();
+  if (name && typeof fetchJsonWithRetry_ === 'function') {
+    const url = 'https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(name);
+    try {
+      const en = fetchJsonWithRetry_(url, fetchOptions);
+      if (en && en.object === 'card' && en.lang !== 'ja' && getImageNormal(en)) return en;
+    } catch {
+      // Fall back to the matched metadata card.
+    }
+  }
+  return card || {};
+}
+
 // convertISO8601ToTime: ISO8601 → HH:mm:ss
 export function convertISO8601ToTime(duration) {
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -176,7 +190,7 @@ export function createFetchJsonWithRetry(UrlFetchApp, Utilities) {
       }
 
       let payload;
-      try { payload = JSON.parse(text); } catch (_e) { payload = { details: text }; }
+      try { payload = JSON.parse(text); } catch { payload = { details: text }; }
       const msg = payload && payload.details ? payload.details : `HTTP ${code}`;
       throw new Error(msg);
     }

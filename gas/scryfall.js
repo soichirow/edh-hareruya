@@ -35,6 +35,7 @@ function fetchMtgCardDataJa() {
 
     try {
       const card = findCardPreferJa(cardNameRaw, fetchOptions);
+      const imageCard = findImageCardPreferEn(card, fetchOptions);
 
       const nameJa = card.printed_name || '';
       const nameEn = card.name || '';
@@ -48,7 +49,7 @@ function fetchMtgCardDataJa() {
 
       const colors = (card.colors || []).join(',');
       const colorIdentity = (card.color_identity || []).join(',');
-      const imageUri = getImageNormal(card);
+      const imageUri = getImageNormal(imageCard) || getImageNormal(card);
       const scryfallUri = card.scryfall_uri || '';
       const cmc = (card.cmc !== null && card.cmc !== undefined) ? card.cmc : '';
 
@@ -149,4 +150,18 @@ function getImageNormal(card) {
     return card.card_faces[0].image_uris.normal;
   }
   return '';
+}
+
+function findImageCardPreferEn(card, fetchOptions) {
+  const name = (card && card.name ? card.name : '').toString().trim();
+  if (name) {
+    const url = 'https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(name);
+    try {
+      const en = fetchJsonWithRetry_(url, fetchOptions);
+      if (en && en.object === 'card' && en.lang !== 'ja' && getImageNormal(en)) return en;
+    } catch (e) {
+      console.error('English image lookup fallback: ' + name + ' - ' + (e && e.message ? e.message : e));
+    }
+  }
+  return card || {};
 }

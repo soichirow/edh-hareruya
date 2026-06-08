@@ -16,6 +16,15 @@ export const MAIN_PRESENTERS = new Set([
   'タカノシゲキ', 'ソラノ', 'ブチャラティ', '卍幻日輪廻卍のタイシン',
 ]);
 
+const COLOR_TOKEN_MAP = {
+  W: 'W', WHITE: 'W', '白': 'W',
+  U: 'U', BLUE: 'U', '青': 'U',
+  B: 'B', BLACK: 'B', '黒': 'B',
+  R: 'R', RED: 'R', '赤': 'R',
+  G: 'G', GREEN: 'G', '緑': 'G',
+  C: 'C', COLORLESS: 'C', COLOURLESS: 'C', '無色': 'C', '無': 'C',
+};
+
 // --- ユーティリティ ---
 
 const s = (v) => String(v ?? '').trim();
@@ -40,11 +49,17 @@ export function getPresenterBucket(row) {
 
 export function ciSet(row) {
   const v = row[KEY_COLOR_ID];
-  if (Array.isArray(v)) {
-    return new Set(v.map(x => String(x).toUpperCase()).filter(c => 'WUBRG'.includes(c)));
-  }
-  const letters = String(v ?? '').toUpperCase().match(/[WUBRG]/g) || [];
-  return new Set(letters);
+  const rawTokens = Array.isArray(v)
+    ? v
+    : String(v ?? '')
+      .replace(/[[\]{}'"]/g, '')
+      .split(/[\s,;/|、，・]+/)
+      .flatMap(token => /^[WUBRGC]+$/i.test(token) ? token.toUpperCase().split('') : [token]);
+
+  const colors = rawTokens
+    .map(token => COLOR_TOKEN_MAP[String(token ?? '').trim().toUpperCase()] || '')
+    .filter(color => color && color !== 'C');
+  return new Set(colors);
 }
 
 export function matchColorsCommander(row, checked) {
@@ -52,8 +67,9 @@ export function matchColorsCommander(row, checked) {
   const have = ciSet(row);
 
   if (set.size === 0) return true;
-  if (set.size === 1 && set.has('C')) return have.size === 0;
-  if (set.has('C')) set.delete('C');
+  if (have.size === 0) return set.has('C');
+  set.delete('C');
+  if (set.size === 0) return false;
 
   for (const c of have) {
     if (!set.has(c)) return false;

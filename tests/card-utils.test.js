@@ -115,6 +115,16 @@ describe('ciSet', () => {
     const card = makeCard({ 'Color Identity': 'W,X,Z' });
     expect(ciSet(card)).toEqual(new Set(['W']));
   });
+
+  it('full color words are parsed as tokens, not individual letters', () => {
+    const card = makeCard({ 'Color Identity': 'Green' });
+    expect(ciSet(card)).toEqual(new Set(['G']));
+  });
+
+  it('colorless words and C are treated as no color identity', () => {
+    expect(ciSet(makeCard({ 'Color Identity': 'Colorless' }))).toEqual(new Set());
+    expect(ciSet(makeCard({ 'Color Identity': 'C' }))).toEqual(new Set());
+  });
 });
 
 // ========================================
@@ -142,9 +152,10 @@ describe('matchColorsCommander', () => {
     expect(matchColorsCommander(cardRUG, ['R', 'U'])).toBe(false);
   });
 
-  it('無色カードは任意の色選択でも通す（CIが空なら部分集合）', () => {
+  it('colorless cards require C to be selected', () => {
     const colorless = makeCard({ 'Color Identity': '' });
-    expect(matchColorsCommander(colorless, ['R'])).toBe(true);
+    expect(matchColorsCommander(colorless, ['R'])).toBe(false);
+    expect(matchColorsCommander(colorless, ['R', 'C'])).toBe(true);
   });
 });
 
@@ -260,14 +271,20 @@ describe('filterCards', () => {
 
   it('色でフィルタ（R選択 → R以下のカードのみ）', () => {
     const result = filterCards(prepared, { colors: ['R'] });
-    // 無色(太陽の指輪) + R(稲妻) = 2
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(1);
+    expect(result[0]['Color Identity']).toBe('R');
   });
 
   it('複合フィルタ', () => {
     const result = filterCards(prepared, { query: '', presenter: '', colors: ['U'] });
-    // 無色(太陽の指輪) + U(対抗呪文) = 2
+    expect(result).toHaveLength(1);
+    expect(result[0]['Color Identity']).toBe('U');
+  });
+
+  it('C can be combined with a color to include colorless cards explicitly', () => {
+    const result = filterCards(prepared, { colors: ['R', 'C'] });
     expect(result).toHaveLength(2);
+    expect(result.map(card => card['Color Identity']).sort()).toEqual(['', 'R']);
   });
 
   it('条件なしなら全件返す', () => {

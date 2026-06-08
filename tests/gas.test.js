@@ -10,6 +10,7 @@ import {
   convertISO8601ToTime,
   getJoined,
   getImageNormal,
+  findImageCardPreferEn,
   isOtakuCardVideo,
   extractVideoData,
   createUpdateLatestVideos,
@@ -119,6 +120,44 @@ describe('getImageNormal', () => {
 // ========================================
 // fetchJsonWithRetry_（モック付き）
 // ========================================
+describe('findImageCardPreferEn', () => {
+  it('uses an English card image when the matched metadata card is Japanese', () => {
+    const jaCard = {
+      object: 'card',
+      lang: 'ja',
+      name: 'Sol Ring',
+      image_uris: { normal: 'https://img.scryfall.com/ja.jpg' },
+    };
+    const fetchedUrls = [];
+    const fetchJson = (url) => {
+      fetchedUrls.push(url);
+      return {
+        object: 'card',
+        lang: 'en',
+        image_uris: { normal: 'https://img.scryfall.com/en.jpg' },
+      };
+    };
+
+    const imageCard = findImageCardPreferEn(jaCard, {}, fetchJson);
+
+    expect(imageCard.lang).toBe('en');
+    expect(getImageNormal(imageCard)).toBe('https://img.scryfall.com/en.jpg');
+    expect(fetchedUrls[0]).toBe('https://api.scryfall.com/cards/named?exact=Sol%20Ring');
+  });
+
+  it('falls back to the original card when no English image is available', () => {
+    const jaCard = {
+      object: 'card',
+      lang: 'ja',
+      name: 'Sol Ring',
+      image_uris: { normal: 'https://img.scryfall.com/ja.jpg' },
+    };
+    const fetchJson = () => ({ object: 'card', lang: 'en' });
+
+    expect(findImageCardPreferEn(jaCard, {}, fetchJson)).toBe(jaCard);
+  });
+});
+
 describe('fetchJsonWithRetry_', () => {
   it('200で正常レスポンスを返す', () => {
     const mockFetch = createMockUrlFetchApp();
