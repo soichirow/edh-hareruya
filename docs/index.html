@@ -48,6 +48,9 @@
     .card-title a:hover { text-decoration: underline; text-underline-offset: 2px; }
     .meta a { text-decoration: none; color: var(--hr-orange); }
     .meta a:hover { text-decoration: underline; }
+    .store-link { display: inline-flex; color: inherit !important; opacity: 0.55; vertical-align: -2px; }
+    .store-link:hover { opacity: 1; }
+    .store-link svg { width: 13px; height: 13px; }
     /* マナシンボル */
     .mana-sym { display: inline-block; width: 16px; height: 16px; vertical-align: middle; }
     /* 色フィルターボタン MTGカラー */
@@ -310,6 +313,14 @@
     const THEME_KEY = 'edh-theme';
     const ANALYTICS_CONSENT_KEY = 'edh-analytics-consent';
     const GA_MEASUREMENT_ID = 'G-0VL077X91B';
+    const STORE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>';
+
+    function setStoreIcon(link) {
+      link.className = 'store-link';
+      link.innerHTML = STORE_ICON;
+      link.title = 'Hareruya';
+      link.setAttribute('aria-label', lang === 'en' ? 'Search on Hareruya' : '晴れる屋で検索');
+    }
 
     // ===== i18n =====
     const I18N = {
@@ -606,8 +617,7 @@
         sun.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(s(row[KEY_JA]) || s(row[KEY_EN]));
         sun.target = '_blank';
         sun.rel = 'noopener';
-        sun.textContent = '☀️';
-        sun.title = 'Hareruya';
+        setStoreIcon(sun);
         meta2.appendChild(sun);
         if (row[KEY_THEME]) {
           const tags = String(row[KEY_THEME]).split(/[\s,、，/／・#]+/).filter(Boolean);
@@ -798,7 +808,7 @@
       sunA.href = 'https://www.hareruyamtg.com/ja/products/search?product=' + encodeURIComponent(s(row[KEY_JA]) || s(row[KEY_EN]));
       sunA.target = '_blank';
       sunA.rel = 'noopener';
-      sunA.textContent = '☀️ Hareruya';
+      setStoreIcon(sunA);
       info.appendChild(sunA);
       modalMeta.appendChild(info);
 
