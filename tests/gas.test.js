@@ -16,7 +16,6 @@ import {
   createUpdateLatestVideos,
   createFetchJsonWithRetry,
   createDoGet,
-  createSheetClass,
 } from './gas-adapter.js';
 
 // ========================================
@@ -187,12 +186,13 @@ describe('fetchJsonWithRetry_', () => {
     expect(() => fn('https://api.example.com', {}, 1)).toThrow('rate limited');
   });
 
-  it('500エラーはリトライせずにスロー', () => {
+  it('500エラーはリトライして最終的に成功する', () => {
     const mockFetch = createMockUrlFetchApp();
     const mockUtil = createMockUtilities();
     mockFetch._addResponse(500, '{"details":"server error"}');
+    mockFetch._addResponse(200, { data: '500-retry-ok' });
     const fn = createFetchJsonWithRetry(mockFetch, mockUtil);
-    expect(() => fn('https://api.example.com', {})).toThrow('server error');
+    expect(fn('https://api.example.com', {})).toEqual({ data: '500-retry-ok' });
   });
 
   it('404エラーのdetailsメッセージを返す', () => {
@@ -201,91 +201,6 @@ describe('fetchJsonWithRetry_', () => {
     mockFetch._addResponse(404, '{"details":"not found"}');
     const fn = createFetchJsonWithRetry(mockFetch, mockUtil);
     expect(() => fn('https://api.example.com', {})).toThrow('not found');
-  });
-});
-
-// ========================================
-// Sheet クラス
-// ========================================
-describe('Sheet class', () => {
-  const SpreadsheetApp = createMockSpreadsheetApp();
-  const SheetClass = createSheetClass(SpreadsheetApp);
-
-  it('ヘッダーを取得できる', () => {
-    const mockSheet = createMockSheet(['名前', '色', 'CMC'], [['Sol Ring', '', '1']]);
-    const s = new SheetClass(mockSheet);
-    expect(s.getHeaders()).toEqual(['名前', '色', 'CMC']);
-  });
-
-  it('データ行を取得できる', () => {
-    const mockSheet = createMockSheet(['名前', 'CMC'], [['Sol Ring', 1], ['Lightning Bolt', 1]]);
-    const s = new SheetClass(mockSheet);
-    expect(s.getDataValues()).toHaveLength(2);
-    expect(s.getDataValues()[0]).toEqual(['Sol Ring', 1]);
-  });
-
-  it('getAsDictsでMap配列を返す', () => {
-    const mockSheet = createMockSheet(['名前', 'CMC'], [['Sol Ring', 1]]);
-    const s = new SheetClass(mockSheet);
-    const dicts = s.getAsDicts();
-    expect(dicts).toHaveLength(1);
-    expect(dicts[0].get('名前')).toBe('Sol Ring');
-    expect(dicts[0].get('CMC')).toBe(1);
-  });
-
-  it('getColumnByHeaderNameで列番号を返す', () => {
-    const mockSheet = createMockSheet(['A', 'B', 'C'], []);
-    const s = new SheetClass(mockSheet);
-    expect(s.getColumnByHeaderName('B')).toBe(2);
-  });
-
-  it('存在しないヘッダー名でエラー', () => {
-    const mockSheet = createMockSheet(['A', 'B'], []);
-    const s = new SheetClass(mockSheet);
-    expect(() => s.getColumnByHeaderName('Z')).toThrow('does not exist');
-  });
-
-  it('filterDictsで条件一致する行を返す', () => {
-    const mockSheet = createMockSheet(
-      ['名前', '色'],
-      [['Sol Ring', ''], ['Lightning Bolt', 'R'], ['Counterspell', 'U']]
-    );
-    const s = new SheetClass(mockSheet);
-    const result = s.filterDicts('色', 'R');
-    expect(result).toHaveLength(1);
-    expect(result[0].get('名前')).toBe('Lightning Bolt');
-  });
-
-  it('findDictで見つからない場合はエラー', () => {
-    const mockSheet = createMockSheet(['名前'], [['Sol Ring']]);
-    const s = new SheetClass(mockSheet);
-    expect(() => s.findDict('名前', 'Missing Card')).toThrow('does not exist');
-  });
-
-  it('findDictで見つかった場合はMapを返す', () => {
-    const mockSheet = createMockSheet(['名前', 'CMC'], [['Sol Ring', 1]]);
-    const s = new SheetClass(mockSheet);
-    const dict = s.findDict('名前', 'Sol Ring');
-    expect(dict.get('CMC')).toBe(1);
-  });
-
-  it('hasValueInFieldで存在チェック', () => {
-    const mockSheet = createMockSheet(['名前'], [['Sol Ring'], ['島']]);
-    const s = new SheetClass(mockSheet);
-    expect(s.hasValueInField('名前', 'Sol Ring')).toBe(true);
-    expect(s.hasValueInField('名前', 'Missing')).toBe(false);
-  });
-
-  it('selectで指定カラムだけ取得', () => {
-    const mockSheet = createMockSheet(['A', 'B', 'C'], [['a1', 'b1', 'c1'], ['a2', 'b2', 'c2']]);
-    const s = new SheetClass(mockSheet);
-    expect(s.select(['A', 'C'])).toEqual([['a1', 'c1'], ['a2', 'c2']]);
-  });
-
-  it('getFieldValuesで単一カラム取得', () => {
-    const mockSheet = createMockSheet(['名前', 'CMC'], [['Sol Ring', 1], ['島', 0]]);
-    const s = new SheetClass(mockSheet);
-    expect(s.getFieldValues('名前')).toEqual(['Sol Ring', '島']);
   });
 });
 
@@ -300,12 +215,10 @@ describe('doGet (JSON API)', () => {
     );
     const SpreadsheetApp = createMockSpreadsheetApp({ 'データベース': dbSheet });
     const ContentService = createMockContentService();
-    const SheetClass = createSheetClass(SpreadsheetApp);
 
     const { doGet, fetchDatabaseJson } = createDoGet({
       SpreadsheetApp,
       ContentService,
-      Sheet: SheetClass,
       DB_SHEET_NAME: 'データベース',
     });
 

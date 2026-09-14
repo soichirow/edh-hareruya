@@ -172,23 +172,58 @@ export function extractEpisodeNumber(title) {
 }
 
 // ===== fetchJsonWithRetry_: リトライ付きfetch =====
+
+/** 429時の待機ms: Retry-Afterヘッダー優先（cap 60s）、なければ指数バックオフ 1000*2^attempt（cap 30s） */
+function resolveRateLimitWaitMs(res, attempt) {
+  if (res && typeof res.getAllHeaders === 'function') {
+    const headers = res.getAllHeaders() || {};
+    const raw = headers['Retry-After'] !== undefined ? headers['Retry-After'] : headers['retry-after'];
+    if (raw !== undefined && raw !== null && raw !== '') {
+      const sec = Number(raw);
+      if (isFinite(sec) && sec >= 0) return Math.min(60000, sec * 1000);
+    }
+  }
+  return Math.min(30000, 1000 * Math.pow(2, attempt));
+}
+
+/** 5xx / fetch例外時の待機ms: 500*2^attempt（cap 8s） */
+function resolveServerErrorWaitMs(attempt) {
+  return Math.min(8000, 500 * Math.pow(2, attempt));
+}
+
 export function createFetchJsonWithRetry(UrlFetchApp, Utilities) {
   return function fetchJsonWithRetry_(url, fetchOptions, maxRetries) {
     const retries = (maxRetries === null || maxRetries === undefined) ? 5 : maxRetries;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
-      const res = UrlFetchApp.fetch(url, fetchOptions);
+      let res;
+      try {
+        res = UrlFetchApp.fetch(url, fetchOptions);
+      } catch (e) {
+        // GASのネットワーク/DNS/タイムアウト例外もリトライ対象
+        if (attempt < retries) {
+          Utilities.sleep(resolveServerErrorWaitMs(attempt));
+          continue;
+        }
+        throw e;
+      }
+
       const code = res.getResponseCode();
       const text = res.getContentText();
 
       if (code >= 200 && code < 300) return JSON.parse(text);
 
       if (code === 429 && attempt < retries) {
-        const waitMs = Math.min(8000, 500 * Math.pow(2, attempt));
-        Utilities.sleep(waitMs);
+        Utilities.sleep(resolveRateLimitWaitMs(res, attempt));
         continue;
       }
 
+      if (code >= 500 && attempt < retries) {
+        Utilities.sleep(resolveServerErrorWaitMs(attempt));
+        continue;
+      }
+
+      // リトライ対象外の4xx、またはリトライ上限到達
       let payload;
       try { payload = JSON.parse(text); } catch { payload = { details: text }; }
       const msg = payload && payload.details ? payload.details : `HTTP ${code}`;
@@ -199,16 +234,138 @@ export function createFetchJsonWithRetry(UrlFetchApp, Utilities) {
   };
 }
 
+// ===== fetchMtgCardDataJa: Scryfallカードデータ一括取得（中断ガード付き） =====
+export function createFetchMtgCardDataJa(deps) {
+  const { SpreadsheetApp, UrlFetchApp, Utilities } = deps;
+  const now = deps.now || Date.now;
+  const fetchJsonWithRetry_ = createFetchJsonWithRetry(UrlFetchApp, Utilities);
+
+  const TIME_BUDGET_MS = 5 * 60 * 1000;
+  const MAX_CONSECUTIVE_FAILURES = 3;
+
+  function findCardPreferJa(cardName, fetchOptions) {
+    const escaped = cardName.replace(/"/g, '\\"');
+    const qJa = '!"' + escaped + '" lang:ja';
+    const urlJa = 'https://api.scryfall.com/cards/search?q=' + encodeURIComponent(qJa) + '&unique=prints&order=released&dir=desc';
+    const ja = fetchJsonWithRetry_(urlJa, fetchOptions);
+
+    if (ja && ja.object === 'list' && Array.isArray(ja.data) && ja.data.length > 0) {
+      return ja.data[0];
+    }
+
+    const urlFuzzy = 'https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(cardName);
+    const fuzzy = fetchJsonWithRetry_(urlFuzzy, fetchOptions);
+
+    if (fuzzy && fuzzy.object === 'card') return fuzzy;
+
+    const detail = (ja && ja.details) ? ja.details : (fuzzy && fuzzy.details) ? fuzzy.details : 'not found';
+    throw new Error(detail);
+  }
+
+  return function fetchMtgCardDataJa() {
+    const summary = { processed: 0, succeeded: 0, skipped: 0, failed: 0, aborted: null };
+    const start = now();
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('データベース');
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return summary;
+
+    const sourceRows = sheet.getRange(2, 12, lastRow - 1, 8).getValues();
+
+    const fetchOptions = {
+      muteHttpExceptions: true,
+      headers: {
+        'User-Agent': 'MtgSheetFetcher/1.0 (contact: sowatanabe@bushiroad-gp.com)',
+        'Accept': 'application/json',
+      },
+    };
+
+    let consecutiveFailures = 0;
+
+    for (let i = 0; i < sourceRows.length; i++) {
+      // 時間予算ガード: 5分超過で中断（残り行は未記入のまま再実行でレジューム可能）
+      if (now() - start > TIME_BUDGET_MS) {
+        summary.aborted = 'time-budget';
+        break;
+      }
+
+      const row = i + 2;
+      const cardNameRaw = (sourceRows[i][0] || '').toString().trim();
+      if (!cardNameRaw) {
+        summary.skipped++;
+        continue;
+      }
+
+      const normalizedName = cardNameRaw.toLowerCase();
+      const already = sourceRows[i].slice(6, 8).some(name =>
+        name && name.toString().trim().toLowerCase() === normalizedName
+      );
+      if (already) {
+        summary.skipped++;
+        continue;
+      }
+
+      summary.processed++;
+      try {
+        const card = findCardPreferJa(cardNameRaw, fetchOptions);
+        const imageCard = findImageCardPreferEn(card, fetchOptions, fetchJsonWithRetry_);
+
+        const nameJa = card.printed_name || '';
+        const nameEn = card.name || '';
+        const manaCost = getJoined(card, 'mana_cost', 'mana_cost');
+        const typeLine = getJoined(card, 'type_line', 'printed_type_line');
+        const oracleText = getJoined(card, 'oracle_text', 'printed_text');
+        const power = getJoined(card, 'power', 'power');
+        const toughness = getJoined(card, 'toughness', 'toughness');
+        const colors = (card.colors || []).join(',');
+        const colorIdentity = (card.color_identity || []).join(',');
+        const imageUri = getImageNormal(imageCard) || getImageNormal(card);
+        const scryfallUri = card.scryfall_uri || '';
+        const cmc = (card.cmc !== null && card.cmc !== undefined) ? card.cmc : '';
+
+        const currentCardName = (sheet.getRange(row, 12).getValue() || '').toString().trim();
+        if (currentCardName !== cardNameRaw) {
+          summary.aborted = 'source-rows-changed';
+          break;
+        }
+
+        sheet.getRange(row, 18, 1, 12).setValues([[
+          nameJa, nameEn, manaCost, typeLine, oracleText,
+          power, toughness, colors, colorIdentity, imageUri, scryfallUri, cmc,
+        ]]);
+
+        summary.succeeded++;
+        consecutiveFailures = 0;
+        Utilities.sleep(150);
+      } catch {
+        summary.failed++;
+        consecutiveFailures++;
+        Utilities.sleep(1000);
+
+        // 連続失敗ブレーカー: 3カード連続失敗で中断
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          summary.aborted = 'consecutive-failures';
+          break;
+        }
+      }
+    }
+
+    return summary;
+  };
+}
+
 // ===== doGet: JSON APIエンドポイント =====
 export function createDoGet(deps) {
-  const { SpreadsheetApp, ContentService, Sheet, DB_SHEET_NAME } = deps;
+  const { SpreadsheetApp, ContentService, DB_SHEET_NAME } = deps;
 
   function fetchDatabaseJson(limit) {
     const max = Math.max(1, Math.min(Number(limit || 1000), 3000));
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = new Sheet(ss.getSheetByName(DB_SHEET_NAME));
-    const dicts = sheet.getAsDicts();
-    const rows = dicts.slice(0, max).map(m => Object.fromEntries(m));
+    const [headers, ...values] = ss.getSheetByName(DB_SHEET_NAME).getDataRange().getValues();
+    const rows = values.slice(0, max).map(row =>
+      Object.fromEntries(headers.map((header, i) => [header, row[i]]))
+    );
     return JSON.stringify(rows);
   }
 
@@ -221,117 +378,4 @@ export function createDoGet(deps) {
   }
 
   return { doGet, fetchDatabaseJson };
-}
-
-// ===== Sheet class (テスト用エクスポート) =====
-export function createSheetClass(SpreadsheetApp) {
-  class Sheet {
-    constructor(sheet = SpreadsheetApp.getActiveSheet(), headerRows = 1, headerIndex = headerRows - 1) {
-      this.sheet = sheet;
-      this.headerRows = headerRows;
-      this.headerIndex = headerIndex;
-    }
-
-    getDataRange() { return this.sheet.getDataRange(); }
-    getRange(...args) { return this.sheet.getRange(...args); }
-    getLastRow() { return this.sheet.getLastRow(); }
-    getLastColumn() { return this.sheet.getLastColumn(); }
-    getName() { return this.sheet.getName(); }
-
-    getDataRangeValues() {
-      if (this.dataRangeValues_ !== undefined) return this.dataRangeValues_;
-      this.dataRangeValues_ = this.getDataRange().getValues();
-      return this.dataRangeValues_;
-    }
-
-    getHeaders() {
-      if (this.headers_ !== undefined) return this.headers_;
-      const headerValues = this.getHeaderValues();
-      this.headers_ = headerValues[this.headerIndex];
-      return this.headers_;
-    }
-
-    getHeaderValues() {
-      if (this.headerValues_ !== undefined) return this.headerValues_;
-      const values = this.getDataRangeValues();
-      this.headerValues_ = values.filter((_, i) => i < this.headerRows);
-      return this.headerValues_;
-    }
-
-    getDataValues() {
-      if (this.dataValues_ !== undefined) return this.dataValues_;
-      const values = this.getDataRangeValues();
-      this.dataValues_ = values.filter((_, i) => i >= this.headerRows);
-      return this.dataValues_;
-    }
-
-    getColumnByHeaderName(headerName) {
-      return this.getColumnIndexByHeaderName(headerName) + 1;
-    }
-
-    getColumnIndexByHeaderName(headerName) {
-      const headers = this.getHeaders();
-      const columnIndex = headers.indexOf(headerName);
-      if (columnIndex === -1) throw new Error('The value "' + headerName + '" does not exist in the header row of sheet "' + this.getName() + '".');
-      return columnIndex;
-    }
-
-    getAsDicts() {
-      if (this.dicts_ !== undefined) return this.dicts_;
-      const headers = this.getHeaders();
-      const values = this.getDataValues();
-      this.dicts_ = values.map((record) =>
-        record.reduce((acc, cur, j) => acc.set(headers[j], cur), new Map())
-      );
-      return this.dicts_;
-    }
-
-    getFieldValues(headerName, isAddHeader = false) {
-      return this.select([headerName], isAddHeader).flat();
-    }
-
-    select(headerNames, isAddHeaders = false) {
-      const dicts = this.getAsDicts();
-      const records = dicts.map(dict => headerNames.map(key => dict.get(key)));
-      return isAddHeaders ? [headerNames, ...records] : records;
-    }
-
-    hasValueInField(headerName, value) {
-      return this.getFieldValues(headerName).includes(value);
-    }
-
-    filterDicts(headerName, value, isSameValue = true) {
-      const dicts = this.getAsDicts();
-      return isSameValue
-        ? dicts.filter(dict => dict.get(headerName) === value)
-        : dicts.filter(dict => dict.get(headerName) !== value);
-    }
-
-    findDict(headerName, value) {
-      const dicts = this.getAsDicts();
-      const dict = dicts.find(dict => dict.get(headerName) === value);
-      if (dict === undefined) throw new Error('The value "' + value + '" does not exist in the "' + headerName + '" column of sheet ' + this.getName() + '.');
-      return dict;
-    }
-
-    findDictIndex(headerName, dict) {
-      const dicts = this.getAsDicts();
-      return dicts.findIndex(record => record.get(headerName) === dict.get(headerName));
-    }
-
-    appendRows(values) {
-      if (values.length === 0) return;
-      this.getRange(this.getLastRow() + 1, 1, values.length, values[0].length).setValues(values);
-      return this;
-    }
-
-    appendDicts(dicts) {
-      const headerNames = this.getHeaders();
-      const records = dicts.map(dict => headerNames.map(key => dict.get(key)));
-      this.appendRows(records);
-      return this;
-    }
-  }
-
-  return Sheet;
 }

@@ -10,7 +10,7 @@ import {
   filterCards,
   sortCards,
   MAIN_PRESENTERS,
-} from '../js/card-utils.js';
+} from '../docs/card-utils.js';
 
 // --- テスト用ヘルパー ---
 function makeCard(overrides = {}) {
@@ -52,6 +52,11 @@ describe('getTitle', () => {
   it('前後の空白をトリムする', () => {
     const card = makeCard({ 'カード名 (日本語)': '  太陽の指輪  ' });
     expect(getTitle(card)).toBe('太陽の指輪');
+  });
+
+  it('英語表示では英語名を優先する', () => {
+    const card = makeCard({ 'カード名 (日本語)': '太陽の指輪', 'カード名 (英語)': 'Sol Ring' });
+    expect(getTitle(card, 'en')).toBe('Sol Ring');
   });
 });
 
@@ -125,6 +130,7 @@ describe('ciSet', () => {
     expect(ciSet(makeCard({ 'Color Identity': 'Colorless' }))).toEqual(new Set());
     expect(ciSet(makeCard({ 'Color Identity': 'C' }))).toEqual(new Set());
   });
+
 });
 
 // ========================================

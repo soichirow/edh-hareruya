@@ -27,7 +27,7 @@ https://soichirow.github.io/edh-hareruya/
 | データ API | Google Apps Script（JSON エンドポイント） |
 | データソース | Google Spreadsheet |
 | カード情報 | [Scryfall API](https://scryfall.com/) |
-| テスト | Vitest（86 テスト） |
+| テスト | Vitest |
 | Lint | ESLint |
 
 ## 開発

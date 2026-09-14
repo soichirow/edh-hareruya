@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <title>EDHオタクカード一覧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="EDHオタクの動画で紹介されたカードを、色・マナ総量・プレゼンター別に探せる非公式ファンサイトです。">
+  <link rel="canonical" href="https://soichirow.github.io/edh-hareruya/">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
@@ -84,6 +86,17 @@
     .site-footer { background: var(--hr-dark); color: rgba(255,255,255,0.65); font-size: 11px; }
     .site-footer a { color: rgba(255,255,255,0.8); text-decoration: underline; text-underline-offset: 2px; }
     .site-footer a:hover { color: #fff; }
+    .analytics-consent {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 1090;
+      max-width: 420px;
+      background: var(--hr-warm-gray);
+      border: 1px solid var(--hr-border);
+      border-radius: var(--card-radius);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+    }
     /* 更新インジケーター */
     .update-indicator { font-size: 0.7rem; opacity: 0.8; }
     /* Offcanvas */
@@ -262,34 +275,32 @@
         Card data &amp; images provided by <a href="https://scryfall.com/" target="_blank" rel="noopener">Scryfall API</a>.
         Scryfall is not affiliated with this site.
       </p>
+      <p class="mb-0 mt-1" style="font-size:10px; opacity:0.8;">
+        <span id="analyticsNotice">Google Analytics は同意した場合のみ読み込まれます。</span>
+        <button type="button" class="btn btn-link p-0 align-baseline" id="analyticsSettingsBtn" style="font-size:inherit; color:inherit;">設定</button>
+      </p>
     </div>
   </footer>
 
+  <aside class="analytics-consent p-3" id="analyticsConsent" role="dialog" aria-labelledby="analyticsConsentTitle" hidden>
+    <p class="fw-bold mb-1" id="analyticsConsentTitle">アクセス解析について</p>
+    <p class="small mb-2"><span id="analyticsConsentText">利用状況の改善のため Google Analytics を使用します。同意するまでデータは送信しません。</span> <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" id="analyticsPrivacy">Google プライバシー ポリシー</a></p>
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="analyticsDecline">同意しない</button>
+      <button type="button" class="btn btn-sm btn-primary" id="analyticsAccept">同意する</button>
+    </div>
+  </aside>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
+    import {
+      KEY_IMG, KEY_JA, KEY_EN, KEY_EPISODE,
+      KEY_YT, KEY_SCRY, KEY_THEME, KEY_COMM,
+      getTitle as getCardTitle, getPresenterRaw, ciSet, getCmc, buildSearchText,
+      filterCards, sortCards,
+    } from './card-utils.js';
+
     // ===== 定数 =====
-    const KEY_IMG = '画像URL';
-    const KEY_JA = 'カード名 (日本語)';
-    const KEY_EN = 'カード名 (英語)';
-    const KEY_PRES = 'プレゼンター';
-    const KEY_COLOR_ID = 'Color Identity';
-    const KEY_EPISODE = '話数';
-    const KEY_CMC = 'CMC';
-    const KEY_YT = '動画URL';
-    const KEY_SCRY = 'Scryfall';
-    const KEY_THEME = 'テーマ';
-    const KEY_COMM = '関連する統率者';
-    const MAIN_PRESENTERS = new Set(['トロピ大塚','いってつ','スギちゃん','タイシン','タカノシゲキ','ソラノ','ブチャラティ','卍幻日輪廻卍のタイシン']);
-    const COLOR_BG = { W:'#F9D94A', U:'#0E68AB', B:'#2B2B2B', R:'#D32029', G:'#00733E' };
-    const COLOR_ORDER = { W:1, U:2, B:3, R:4, G:5 };
-    const COLOR_TOKEN_MAP = {
-      W: 'W', WHITE: 'W', '白': 'W',
-      U: 'U', BLUE: 'U', '青': 'U',
-      B: 'B', BLACK: 'B', '黒': 'B',
-      R: 'R', RED: 'R', '赤': 'R',
-      G: 'G', GREEN: 'G', '緑': 'G',
-      C: 'C', COLORLESS: 'C', COLOURLESS: 'C', '無色': 'C', '無': 'C',
-    };
     const API_URL = 'https://script.google.com/macros/s/AKfycbyB4dhlTnD6qjbiEszJ4r75hTHpKUSQ1Mxcqjy0mTZARxMMyzMwkAi5RkmAScV003dY8Q/exec?format=json&limit=3000';
     const CACHE_KEY = 'edh-cards-cache';
     const CACHE_TS_KEY = 'edh-cards-ts';
@@ -297,6 +308,8 @@
     const FAV_KEY = 'edh-favorites';
     const LANG_KEY = 'edh-lang';
     const THEME_KEY = 'edh-theme';
+    const ANALYTICS_CONSENT_KEY = 'edh-analytics-consent';
+    const GA_MEASUREMENT_ID = 'G-0VL077X91B';
 
     // ===== i18n =====
     const I18N = {
@@ -328,6 +341,13 @@
         colorNames: { W:'白', U:'青', B:'黒', R:'赤', G:'緑', C:'無' },
         langBtn: 'EN',
         nineCards: 'My 9 Cards',
+        analyticsNotice: 'Google Analytics は同意した場合のみ読み込まれます。',
+        analyticsSettings: '設定',
+        analyticsTitle: 'アクセス解析について',
+        analyticsText: '利用状況の改善のため Google Analytics を使用します。同意するまでデータは送信しません。',
+        analyticsPrivacy: 'Google プライバシー ポリシー',
+        analyticsAccept: '同意する',
+        analyticsDecline: '同意しない',
       },
       en: {
         siteTitle: 'EDH Otaku Card Gallery',
@@ -357,6 +377,13 @@
         colorNames: { W:'W', U:'U', B:'B', R:'R', G:'G', C:'C' },
         langBtn: 'JA',
         nineCards: 'My 9 Cards',
+        analyticsNotice: 'Google Analytics loads only with your consent.',
+        analyticsSettings: 'Settings',
+        analyticsTitle: 'Analytics',
+        analyticsText: 'We use Google Analytics to improve this site. No data is sent until you consent.',
+        analyticsPrivacy: 'Google Privacy Policy',
+        analyticsAccept: 'Accept',
+        analyticsDecline: 'Decline',
       }
     };
 
@@ -385,6 +412,13 @@
       document.getElementById('footerGift').textContent = l.gift;
       document.getElementById('footerPolicy').textContent = l.policy;
       document.getElementById('footerDisclaimer').firstChild.textContent = l.disclaimer + ' ';
+      document.getElementById('analyticsNotice').textContent = l.analyticsNotice;
+      document.getElementById('analyticsSettingsBtn').textContent = l.analyticsSettings;
+      document.getElementById('analyticsConsentTitle').textContent = l.analyticsTitle;
+      document.getElementById('analyticsConsentText').textContent = l.analyticsText;
+      document.getElementById('analyticsPrivacy').textContent = l.analyticsPrivacy;
+      document.getElementById('analyticsAccept').textContent = l.analyticsAccept;
+      document.getElementById('analyticsDecline').textContent = l.analyticsDecline;
       document.getElementById('langToggle').textContent = l.langBtn;
       document.getElementById('nineCardsLink').textContent = l.nineCards;
       const cn = l.colorNames;
@@ -437,62 +471,9 @@
       applyFilterSort();
     });
 
-    // ===== ユーティリティ (card-utils.js と同じロジック) =====
+    // ===== ユーティリティ =====
     const s = (v) => String(v ?? '').trim();
-    function getTitle(row) { return lang === 'en' ? (s(row[KEY_EN]) || s(row[KEY_JA]) || 'Card') : (s(row[KEY_JA]) || s(row[KEY_EN]) || 'カード'); }
-    function getPresenterRaw(row) { return s(row[KEY_PRES]); }
-    function getPresenterBucket(row) {
-      const raw = getPresenterRaw(row);
-      if (!raw) return '';
-      const parts = raw.split(/[,\u3001/／・\s]+/).map(x => x.trim()).filter(Boolean);
-      for (const p of parts) if (MAIN_PRESENTERS.has(p)) return p;
-      return 'その他';
-    }
-    function ciSet(row) {
-      const v = row[KEY_COLOR_ID];
-      const rawTokens = Array.isArray(v)
-        ? v
-        : String(v ?? '')
-          .replace(/[[\]{}'"]/g, '')
-          .split(/[\s,;/|、，・]+/)
-          .flatMap(token => /^[WUBRGC]+$/i.test(token) ? token.toUpperCase().split('') : [token]);
-      const colors = rawTokens
-        .map(token => COLOR_TOKEN_MAP[String(token ?? '').trim().toUpperCase()] || '')
-        .filter(color => color && color !== 'C');
-      return new Set(colors);
-    }
-    function matchColorsCommander(row, checked) {
-      const set = new Set(checked);
-      const have = ciSet(row);
-      if (set.size === 0) return true;
-      if (have.size === 0) return set.has('C');
-      set.delete('C');
-      if (set.size === 0) return false;
-      for (const c of have) if (!set.has(c)) return false;
-      return true;
-    }
-    function colorSortKey(row) {
-      const have = ciSet(row);
-      if (have.size === 0) return [0, 0, getTitle(row).toLowerCase()];
-      const seq = ['W','U','B','R','G'].filter(c => have.has(c));
-      return [COLOR_ORDER[seq[0]], seq.length, getTitle(row).toLowerCase()];
-    }
-    function toNum(v) {
-      if (typeof v === 'number') return v;
-      const n = Number(String(v).replace(/[^\d.-]/g, ''));
-      return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
-    }
-    function getCmc(row) {
-      const str = String(row?.[KEY_CMC] ?? '').trim();
-      if (str === '') return Number.POSITIVE_INFINITY;
-      const n = Number(str);
-      return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
-    }
-    function buildSearchText(row) {
-      return [row[KEY_JA], row[KEY_EN], row[KEY_COMM], row[KEY_THEME]]
-        .flatMap(v => String(v ?? '').split(/[\s,、，/／・]+/).filter(Boolean))
-        .map(x => x.toLowerCase()).join(' ');
-    }
+    const getTitle = (row) => getCardTitle(row, lang);
     const toHttps = (u) => (typeof u === 'string' ? u.replace(/^http:\/\//i, 'https://') : '');
 
     // ===== DOM =====
@@ -663,42 +644,9 @@
       const sortKey = document.getElementById('sortKey').value;
       const sortDir = document.getElementById('sortDir').value;
       const checked = [...document.querySelectorAll('#colorBox input[type="checkbox"]:checked')].map(x => x.value);
-      const mul = (sortDir === 'desc') ? -1 : 1;
-
-      view = ALL.filter(row => {
-        if (q && !String(row._searchText || '').includes(q)) return false;
-        if (presSel && presSel !== getPresenterBucket(row)) return false;
-        if (!matchColorsCommander(row, checked)) return false;
-        if (favOnly) {
-          const cardId = s(row[KEY_JA]) || s(row[KEY_EN]);
-          if (!isFav(cardId)) return false;
-        }
-        return true;
-      });
-
-      if (sortKey === 'color') {
-        view.sort((a, b) => {
-          const aa = colorSortKey(a), bb = colorSortKey(b);
-          for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
-            if (aa[i] === bb[i]) continue;
-            return (aa[i] < bb[i] ? -1 : 1) * mul;
-          }
-          return 0;
-        });
-      } else if (sortKey === 'episode') {
-        view.sort((a, b) => (toNum(a[KEY_EPISODE]) - toNum(b[KEY_EPISODE])) * mul);
-      } else if (sortKey === 'cmc') {
-        view.sort((a, b) => {
-          const d = getCmc(a) - getCmc(b);
-          if (d !== 0) return d * mul;
-          const aa = colorSortKey(a), bb = colorSortKey(b);
-          for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
-            if (aa[i] === bb[i]) continue;
-            return (aa[i] < bb[i] ? -1 : 1) * mul;
-          }
-          return 0;
-        });
-      }
+      view = filterCards(ALL, { query: q, presenter: presSel, colors: checked });
+      if (favOnly) view = view.filter(row => isFav(s(row[KEY_JA]) || s(row[KEY_EN])));
+      sortCards(view, sortKey, sortDir, lang);
 
       render(view);
       updateFilterSummary(q, presSel, checked);
@@ -888,6 +836,45 @@
       alert(t().cacheCleared);
       location.reload();
     });
+
+    // ===== Google Analytics（同意後のみ） =====
+    const analyticsConsent = document.getElementById('analyticsConsent');
+    let analyticsLoaded = false;
+
+    function loadAnalytics() {
+      if (analyticsLoaded) return;
+      analyticsLoaded = true;
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('consent', 'default', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+      });
+      window.gtag('consent', 'update', { analytics_storage: 'granted' });
+      window.gtag('js', new Date());
+      window.gtag('config', GA_MEASUREMENT_ID);
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+      document.head.appendChild(script);
+    }
+
+    function setAnalyticsConsent(value) {
+      localStorage.setItem(ANALYTICS_CONSENT_KEY, value);
+      analyticsConsent.hidden = true;
+      if (value === 'granted') loadAnalytics();
+      else if (analyticsLoaded) location.reload();
+    }
+
+    document.getElementById('analyticsAccept').addEventListener('click', () => setAnalyticsConsent('granted'));
+    document.getElementById('analyticsDecline').addEventListener('click', () => setAnalyticsConsent('denied'));
+    document.getElementById('analyticsSettingsBtn').addEventListener('click', () => { analyticsConsent.hidden = false; });
+
+    const analyticsChoice = localStorage.getItem(ANALYTICS_CONSENT_KEY);
+    if (analyticsChoice === 'granted') loadAnalytics();
+    else if (!analyticsChoice) analyticsConsent.hidden = false;
 
     // ===== データ取得（Stale-While-Revalidate） =====
     function loadRows(rows) {

@@ -53,7 +53,6 @@ export default [
         String: 'readonly',
         Date: 'readonly',
         Math: 'readonly',
-        Sheet: 'writable',
         SS: 'readonly',
         EXCEL_INFO: 'readonly',
         convertISO8601ToTime: 'readonly',

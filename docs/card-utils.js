@@ -29,11 +29,12 @@ const COLOR_TOKEN_MAP = {
 
 const s = (v) => String(v ?? '').trim();
 
-export function getTitle(row) {
+export function getTitle(row, language = 'ja') {
+  if (language === 'en') return s(row[KEY_EN]) || s(row[KEY_JA]) || 'Card';
   return s(row[KEY_JA]) || s(row[KEY_EN]) || 'カード';
 }
 
-function getPresenterRaw(row) {
+export function getPresenterRaw(row) {
   return s(row[KEY_PRES]);
 }
 
@@ -79,12 +80,12 @@ export function matchColorsCommander(row, checked) {
 
 const COLOR_ORDER = { 'W': 1, 'U': 2, 'B': 3, 'R': 4, 'G': 5 };
 
-export function colorSortKey(row) {
+export function colorSortKey(row, language = 'ja') {
   const have = ciSet(row);
-  if (have.size === 0) return [0, 0, getTitle(row).toLowerCase()];
+  if (have.size === 0) return [0, 0, getTitle(row, language).toLowerCase()];
   const seq = ['W', 'U', 'B', 'R', 'G'].filter(c => have.has(c));
   const minRank = COLOR_ORDER[seq[0]];
-  return [minRank, seq.length, getTitle(row).toLowerCase()];
+  return [minRank, seq.length, getTitle(row, language).toLowerCase()];
 }
 
 function toNum(v) {
@@ -133,13 +134,13 @@ export function filterCards(cards, { query = '', presenter = '', colors = [] } =
   });
 }
 
-export function sortCards(cards, sortKey, sortDir) {
+export function sortCards(cards, sortKey, sortDir, language = 'ja') {
   const mul = sortDir === 'desc' ? -1 : 1;
 
   if (sortKey === 'color') {
     cards.sort((a, b) => {
-      const aa = colorSortKey(a);
-      const bb = colorSortKey(b);
+      const aa = colorSortKey(a, language);
+      const bb = colorSortKey(b, language);
       for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
         if (aa[i] === bb[i]) continue;
         return (aa[i] < bb[i] ? -1 : 1) * mul;
@@ -152,8 +153,8 @@ export function sortCards(cards, sortKey, sortDir) {
     cards.sort((a, b) => {
       const d = getCmc(a) - getCmc(b);
       if (d !== 0) return d * mul;
-      const aa = colorSortKey(a);
-      const bb = colorSortKey(b);
+      const aa = colorSortKey(a, language);
+      const bb = colorSortKey(b, language);
       for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
         if (aa[i] === bb[i]) continue;
         return (aa[i] < bb[i] ? -1 : 1) * mul;

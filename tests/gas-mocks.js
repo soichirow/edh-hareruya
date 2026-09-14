@@ -104,21 +104,31 @@ export function createMockSpreadsheetApp(sheets = {}) {
 
 export function createMockUrlFetchApp() {
   const responses = [];
+  const urls = [];
   return {
-    _addResponse: (code, body) => { responses.push({ code, body }); },
-    fetch: () => {
-      const resp = responses.shift() || { code: 200, body: '{}' };
+    _urls: urls,
+    _addResponse: (code, body, headers) => { responses.push({ code, body, headers: headers || {} }); },
+    _addError: (message) => { responses.push({ error: message }); },
+    fetch: (url) => {
+      urls.push(url);
+      const resp = responses.shift() || { code: 200, body: '{}', headers: {} };
+      if (resp.error !== undefined) {
+        throw new Error(resp.error);
+      }
       return {
         getResponseCode: () => resp.code,
         getContentText: () => typeof resp.body === 'string' ? resp.body : JSON.stringify(resp.body),
+        getAllHeaders: () => resp.headers || {},
       };
     },
   };
 }
 
 export function createMockUtilities() {
+  const sleeps = [];
   return {
-    sleep: () => {},
+    _sleeps: sleeps,
+    sleep: (ms) => { sleeps.push(ms); },
     formatDate: (date, _tz, _fmt) => new Date(date).toISOString(),
   };
 }

@@ -6,15 +6,28 @@
 /**
  * スプレッドシートのカード名からScryfall APIでデータ取得・書き込み
  * L列（12列目）のカード名を読み、R列以降（18列目〜）にデータを書き込む
- * 既にR列にデータがあるカードはスキップ
+ * 既にR列にデータがあるカードはスキップ（中断後の再実行でレジューム可能）
+ *
+ * 中断ガード:
+ * - 連続3カード失敗で中断（consecutive-failures）
+ * - 開始から5分超過で中断（time-budget）
+ * 中断しても、R列が埋まった行はスキップされるため再実行すれば続きから処理される
+ *
+ * @return {{processed: number, succeeded: number, skipped: number, failed: number, aborted: (string|null)}} 実行サマリ
  */
 function fetchMtgCardDataJa() {
+  const TIME_BUDGET_MS = 5 * 60 * 1000;
+  const MAX_CONSECUTIVE_FAILURES = 3;
+
+  const summary = { processed: 0, succeeded: 0, skipped: 0, failed: 0, aborted: null };
+  const start = Date.now();
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('データベース');
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return;
+  if (lastRow < 2) return summary;
 
-  const cardNames = sheet.getRange(2, 12, lastRow - 1, 1).getValues();
+  const sourceRows = sheet.getRange(2, 12, lastRow - 1, 8).getValues();
 
   const fetchOptions = {
     muteHttpExceptions: true,
@@ -24,15 +37,34 @@ function fetchMtgCardDataJa() {
     },
   };
 
-  for (let i = 0; i < cardNames.length; i++) {
+  let consecutiveFailures = 0;
+
+  for (let i = 0; i < sourceRows.length; i++) {
+    // 時間予算ガード: 5分超過で中断（GASの6分実行制限到達前に安全に止める）
+    if (Date.now() - start > TIME_BUDGET_MS) {
+      summary.aborted = 'time-budget';
+      console.log('時間予算（5分）を超過したため中断します。再実行すれば続きから処理されます。');
+      break;
+    }
+
     const row = i + 2;
-    const cardNameRaw = (cardNames[i][0] || '').toString().trim();
-    if (!cardNameRaw) continue;
+    const cardNameRaw = (sourceRows[i][0] || '').toString().trim();
+    if (!cardNameRaw) {
+      summary.skipped++;
+      continue;
+    }
 
-    // すでにR列が埋まっていたらスキップ
-    const already = sheet.getRange(row, 18).getValue();
-    if (already) continue;
+    // 紹介カード名と取得済みの日英名が一致する行だけスキップする。
+    const normalizedName = cardNameRaw.toLowerCase();
+    const already = sourceRows[i].slice(6, 8).some(function(name) {
+      return name && name.toString().trim().toLowerCase() === normalizedName;
+    });
+    if (already) {
+      summary.skipped++;
+      continue;
+    }
 
+    summary.processed++;
     try {
       const card = findCardPreferJa(cardNameRaw, fetchOptions);
       const imageCard = findImageCardPreferEn(card, fetchOptions);
@@ -53,18 +85,46 @@ function fetchMtgCardDataJa() {
       const scryfallUri = card.scryfall_uri || '';
       const cmc = (card.cmc !== null && card.cmc !== undefined) ? card.cmc : '';
 
+      // API待機中に行が追加・移動された場合、別カードの行へ書き込まない。
+      const currentCardName = (sheet.getRange(row, 12).getValue() || '').toString().trim();
+      if (currentCardName !== cardNameRaw) {
+        summary.aborted = 'source-rows-changed';
+        console.error('紹介カードの行が処理中に変更されたため中断します。再実行してください。');
+        break;
+      }
+
       sheet.getRange(row, 18, 1, 12).setValues([[
         nameJa, nameEn, manaCost, typeLine, oracleText,
         power, toughness, colors, colorIdentity, imageUri, scryfallUri, cmc
       ]]);
 
+      summary.succeeded++;
+      consecutiveFailures = 0;
       Utilities.sleep(150);
 
     } catch (e) {
       console.error('カード取得失敗: ' + cardNameRaw + ' - ' + (e && e.message ? e.message : e));
+      summary.failed++;
+      consecutiveFailures++;
       Utilities.sleep(1000);
+
+      // 連続失敗ブレーカー: 3カード連続失敗で中断（レート制限・障害時のカスケード防止）
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        summary.aborted = 'consecutive-failures';
+        console.error('3カード連続で失敗したため中断します。時間をおいて再実行してください（処理済み行はスキップされます）。');
+        break;
+      }
     }
   }
+
+  console.log(
+    '完了サマリ: 処理 ' + summary.processed +
+    ' / 成功 ' + summary.succeeded +
+    ' / スキップ ' + summary.skipped +
+    ' / 失敗 ' + summary.failed +
+    (summary.aborted ? ' / 中断理由: ' + summary.aborted : '')
+  );
+  return summary;
 }
 
 /**

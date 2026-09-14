@@ -30,12 +30,13 @@ function logAccess_() {
   }
 }
 
-/** シート→JSON文字列（Map→Objectに変換） */
+/** シート→JSON文字列 */
 function fetchDatabaseJson(limit) {
   const max = Math.max(1, Math.min(Number(limit || 1000), 3000));
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = new Sheet(ss.getSheetByName(DB_SHEET_NAME));
-  const dicts = sheet.getAsDicts();
-  const rows = dicts.slice(0, max).map(m => Object.fromEntries(m));
+  const [headers, ...values] = ss.getSheetByName(DB_SHEET_NAME).getDataRange().getValues();
+  const rows = values.slice(0, max).map(row =>
+    Object.fromEntries(headers.map((header, i) => [header, row[i]]))
+  );
   return JSON.stringify(rows);
 }

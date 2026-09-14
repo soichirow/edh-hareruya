@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://soichirow.github.io/edh-hareruya/sitemap.xml
