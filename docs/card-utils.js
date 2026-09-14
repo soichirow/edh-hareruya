@@ -120,8 +120,9 @@ export function buildSearchText(row) {
 
 // --- フィルタ・ソート ---
 
-export function filterCards(cards, { query = '', presenter = '', colors = [] } = {}) {
+export function filterCards(cards, { query = '', presenter = '', colors = [], cmc = '' } = {}) {
   const q = s(query).toLowerCase();
+  const cmcValue = s(cmc) === '' ? null : Number(cmc);
 
   return cards.filter(row => {
     if (q && !String(row._searchText || '').includes(q)) return false;
@@ -130,6 +131,7 @@ export function filterCards(cards, { query = '', presenter = '', colors = [] } =
       if (presenter !== bucket) return false;
     }
     if (!matchColorsCommander(row, colors)) return false;
+    if (cmcValue !== null && getCmc(row) !== cmcValue) return false;
     return true;
   });
 }

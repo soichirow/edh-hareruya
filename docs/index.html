@@ -143,13 +143,13 @@
       <div id="filterPanel">
         <!-- 検索 + フィルター -->
         <div class="row g-2 align-items-center mb-2">
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <div class="input-group">
               <input id="q" type="search" class="form-control" placeholder="" aria-label="検索">
               <button class="btn btn-outline-secondary d-none" type="button" id="qClear" aria-label="クリア">&times;</button>
             </div>
           </div>
-          <div class="col-6 col-md-3">
+          <div class="col-6 col-md-2">
             <select id="presenter" class="form-select">
               <option value="" id="presAll">プレゼンター（すべて）</option>
               <option>トロピ大塚</option>
@@ -162,6 +162,9 @@
               <option>卍幻日輪廻卍のタイシン</option>
               <option value="その他" id="presOther">その他</option>
             </select>
+          </div>
+          <div class="col-6 col-md-2">
+            <input id="cmcFilter" type="number" min="0" step="1" class="form-control" placeholder="マナ総量" aria-label="マナ総量">
           </div>
           <div class="col-6 col-md-2">
             <select id="sortKey" class="form-select">
@@ -335,6 +338,7 @@
         sortColor: '色（Identity）',
         sortEp: '話数',
         sortCmc: 'マナ総量（CMC）',
+        cmcFilter: 'マナ総量',
         sortAsc: '昇順',
         sortDesc: '降順',
         stat: (shown, total) => `表示: ${shown} / 全${total}`,
@@ -371,6 +375,7 @@
         sortColor: 'Color Identity',
         sortEp: 'Episode',
         sortCmc: 'CMC',
+        cmcFilter: 'CMC',
         sortAsc: 'Ascending',
         sortDesc: 'Descending',
         stat: (shown, total) => `Showing: ${shown} / Total ${total}`,
@@ -415,6 +420,8 @@
       document.getElementById('sortColor').textContent = l.sortColor;
       document.getElementById('sortEp').textContent = l.sortEp;
       document.getElementById('sortCmc').textContent = l.sortCmc;
+      document.getElementById('cmcFilter').placeholder = l.cmcFilter;
+      document.getElementById('cmcFilter').setAttribute('aria-label', l.cmcFilter);
       document.getElementById('sortAsc').textContent = l.sortAsc;
       document.getElementById('sortDesc').textContent = l.sortDesc;
       document.getElementById('offcanvasFilterTitle').textContent = l.offcanvasTitle;
@@ -651,19 +658,20 @@
       if (!keepPage) displayCount = PAGE_SIZE;
       const q = s(document.getElementById('q').value).toLowerCase();
       const presSel = s(document.getElementById('presenter').value);
+      const cmc = s(document.getElementById('cmcFilter').value);
       const sortKey = document.getElementById('sortKey').value;
       const sortDir = document.getElementById('sortDir').value;
       const checked = [...document.querySelectorAll('#colorBox input[type="checkbox"]:checked')].map(x => x.value);
-      view = filterCards(ALL, { query: q, presenter: presSel, colors: checked });
+      view = filterCards(ALL, { query: q, presenter: presSel, colors: checked, cmc });
       if (favOnly) view = view.filter(row => isFav(s(row[KEY_JA]) || s(row[KEY_EN])));
       sortCards(view, sortKey, sortDir, lang);
 
       render(view);
-      updateFilterSummary(q, presSel, checked);
+      updateFilterSummary(q, presSel, checked, cmc);
     }
 
     // ===== フィルターサマリー =====
-    function updateFilterSummary(q, presSel, checked) {
+    function updateFilterSummary(q, presSel, checked, cmc) {
       const summary = document.getElementById('filterSummary');
       summary.innerHTML = '';
       let count = 0;
@@ -675,6 +683,10 @@
       if (presSel) {
         count++;
         summary.appendChild(makeBadge('P: ' + presSel, () => { document.getElementById('presenter').value = ''; applyFilterSort(); }));
+      }
+      if (cmc !== '') {
+        count++;
+        summary.appendChild(makeBadge('CMC: ' + cmc, () => { document.getElementById('cmcFilter').value = ''; applyFilterSort(); }));
       }
       checked.forEach(c => {
         count++;
@@ -717,6 +729,7 @@
       applyFilterSort();
     });
     document.getElementById('presenter').addEventListener('change', onChange);
+    document.getElementById('cmcFilter').addEventListener('input', onChange);
     document.getElementById('sortKey').addEventListener('change', onChange);
     document.getElementById('sortDir').addEventListener('change', onChange);
     document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el => el.addEventListener('change', onChange));
@@ -726,6 +739,7 @@
       document.getElementById('q').value = '';
       document.getElementById('qClear').classList.add('d-none');
       document.getElementById('presenter').value = '';
+      document.getElementById('cmcFilter').value = '';
       document.getElementById('sortKey').value = 'none';
       document.getElementById('sortDir').value = 'asc';
       document.querySelectorAll('#colorBox input[type="checkbox"]').forEach(el => { el.checked = false; });

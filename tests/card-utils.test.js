@@ -281,6 +281,12 @@ describe('filterCards', () => {
     expect(result[0]['Color Identity']).toBe('R');
   });
 
+  it('マナ総量でフィルタ', () => {
+    const result = filterCards(prepared, { cmc: '2' });
+    expect(result).toHaveLength(2);
+    expect(result.every(card => card.CMC === 2)).toBe(true);
+  });
+
   it('複合フィルタ', () => {
     const result = filterCards(prepared, { query: '', presenter: '', colors: ['U'] });
     expect(result).toHaveLength(1);
