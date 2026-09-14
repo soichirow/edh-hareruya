@@ -153,7 +153,11 @@ export function sortCards(cards, sortKey, sortDir, language = 'ja') {
     cards.sort((a, b) => (toNum(a[KEY_EPISODE]) - toNum(b[KEY_EPISODE])) * mul);
   } else if (sortKey === 'cmc') {
     cards.sort((a, b) => {
-      const d = getCmc(a) - getCmc(b);
+      const aCmc = getCmc(a);
+      const bCmc = getCmc(b);
+      if (!Number.isFinite(aCmc)) return Number.isFinite(bCmc) ? 1 : 0;
+      if (!Number.isFinite(bCmc)) return -1;
+      const d = aCmc - bCmc;
       if (d !== 0) return d * mul;
       const aa = colorSortKey(a, language);
       const bb = colorSortKey(b, language);

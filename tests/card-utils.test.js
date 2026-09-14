@@ -340,6 +340,12 @@ describe('sortCards', () => {
     expect(getCmc(sorted[2])).toBe(3);
   });
 
+  it('CMCソート降順でも欠損値は末尾', () => {
+    const withMissing = [...cards, makeCard({ 'カード名 (日本語)': 'D', 'CMC': '' })];
+    const sorted = sortCards(withMissing, 'cmc', 'desc');
+    expect(sorted.map(getCmc)).toEqual([3, 1, 0, Number.POSITIVE_INFINITY]);
+  });
+
   it('ソートキーnoneなら順序変更なし', () => {
     const original = [...cards];
     const sorted = sortCards([...cards], 'none', 'asc');
