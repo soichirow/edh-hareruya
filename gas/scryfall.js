@@ -163,15 +163,35 @@ function fetchJsonWithRetry_(url, fetchOptions, maxRetries) {
   const retries = (maxRetries === null || maxRetries === undefined) ? 5 : maxRetries;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const res = UrlFetchApp.fetch(url, fetchOptions);
+    let res;
+    try {
+      res = UrlFetchApp.fetch(url, fetchOptions);
+    } catch (e) {
+      if (attempt < retries) {
+        Utilities.sleep(Math.min(8000, 500 * Math.pow(2, attempt)));
+        continue;
+      }
+      throw e;
+    }
+
     const code = res.getResponseCode();
     const text = res.getContentText();
 
     if (code >= 200 && code < 300) return JSON.parse(text);
 
     if (code === 429 && attempt < retries) {
-      const waitMs = Math.min(8000, 500 * Math.pow(2, attempt));
+      const headers = typeof res.getAllHeaders === 'function' ? (res.getAllHeaders() || {}) : {};
+      const retryAfter = headers['Retry-After'] !== undefined ? headers['Retry-After'] : headers['retry-after'];
+      const seconds = Number(retryAfter);
+      const waitMs = retryAfter !== undefined && isFinite(seconds) && seconds >= 0
+        ? Math.min(60000, seconds * 1000)
+        : Math.min(30000, 1000 * Math.pow(2, attempt));
       Utilities.sleep(waitMs);
+      continue;
+    }
+
+    if (code >= 500 && attempt < retries) {
+      Utilities.sleep(Math.min(8000, 500 * Math.pow(2, attempt)));
       continue;
     }
 

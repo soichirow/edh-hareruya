@@ -93,7 +93,7 @@ function newUpdate() {
 
   if (!playlistResponse.items) {
     Logger.log('動画が取得できませんでした');
-    return;
+    return 0;
   }
 
   const videoIds = playlistResponse.items.map(function(item) { return item.contentDetails.videoId; }).join(',');
@@ -145,6 +145,7 @@ function newUpdate() {
   }
 
   Logger.log('最新動画取得: 新規 ' + newRows.length + '件を追加（データベースに ' + (newRows.length * 4) + '行）');
+  return newRows.length;
 }
 
 /**

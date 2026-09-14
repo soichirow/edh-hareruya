@@ -1,10 +1,7 @@
 /**
- * RED: エラー耐性強化の仕様テスト
+ * GAS本体のエラー耐性と中断ガードのテスト
  * - fetchJsonWithRetry_ の 5xx / ネットワーク例外リトライ・Retry-After 対応
- * - createFetchMtgCardDataJa（新ファクトリ、未実装）のサマリ・中断仕様
- *
- * 注: createFetchMtgCardDataJa は gas-adapter.js にまだ存在しない。
- * namespace import 経由で参照するため、各テストが TypeError で RED になる。
+ * - fetchMtgCardDataJa のサマリ・中断仕様
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -97,7 +94,7 @@ describe('fetchJsonWithRetry_ (error resilience)', () => {
 });
 
 // ========================================
-// B. createFetchMtgCardDataJa（新ファクトリ・未実装）
+// B. fetchMtgCardDataJa
 // ========================================
 
 // データベースシートの29列ヘッダー（L列=12列目: 紹介カード、R列=18列目〜: Scryfallデータ）

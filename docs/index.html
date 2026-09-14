@@ -309,8 +309,6 @@
     // ===== 定数 =====
     const API_URL = 'https://script.google.com/macros/s/AKfycbyB4dhlTnD6qjbiEszJ4r75hTHpKUSQ1Mxcqjy0mTZARxMMyzMwkAi5RkmAScV003dY8Q/exec?format=json&limit=3000';
     const CACHE_KEY = 'edh-cards-cache';
-    const CACHE_TS_KEY = 'edh-cards-ts';
-    const CACHE_TTL = 3600000; // 1時間
     const FAV_KEY = 'edh-favorites';
     const LANG_KEY = 'edh-lang';
     const THEME_KEY = 'edh-theme';
@@ -856,7 +854,6 @@
     // ===== キャッシュクリアボタン =====
     document.getElementById('cacheClearBtn').addEventListener('click', () => {
       localStorage.removeItem(CACHE_KEY);
-      localStorage.removeItem(CACHE_TS_KEY);
       alert(t().cacheCleared);
       location.reload();
     });
@@ -916,7 +913,6 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const rows = await res.json();
         localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
-        localStorage.setItem(CACHE_TS_KEY, String(Date.now()));
         statusEl.textContent = t().updated;
         setTimeout(() => { statusEl.textContent = ''; }, 3000);
         return rows;
