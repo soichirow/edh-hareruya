@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>EDHオタクカード一覧</title>
+  <title>晴れる屋コマンダーオタクカード紹介カード一覧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="EDHオタクの動画で紹介されたカードを、色・マナ総量・プレゼンター別に探せる非公式ファンサイトです。">
   <link rel="canonical" href="https://soichirow.github.io/edh-hareruya/">
@@ -111,17 +111,17 @@
   <!-- ===== ヘッダー ===== -->
   <header class="site-header sticky-top shadow-sm">
     <div class="container py-2">
-      <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
         <div>
           <h1 class="h5 m-0 text-white d-flex align-items-center gap-2">
-            ☀️ <span id="siteTitle">EDH オタクカード画像一覧</span>
+            ☀️ <span id="siteTitle">晴れる屋コマンダーオタクカード紹介カード一覧</span>
           </h1>
           <div class="d-flex align-items-center gap-2 mt-1">
             <span class="badge bg-dark bg-opacity-25" style="font-size:0.65rem;" id="unofficialBadge">非公式ファンサイト</span>
             <span class="update-indicator text-white" id="updateStatus"></span>
           </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 align-self-end align-self-md-auto">
           <a href="https://soichirow.github.io/my-9-cards-mtg/index.html" class="btn btn-sm btn-outline-light" style="font-size:0.7rem;" target="_blank" rel="noopener" id="nineCardsLink">My 9 Cards</a>
           <button id="langToggle" class="btn btn-sm text-white" style="font-size:0.85rem;">EN</button>
           <button id="themeToggle" class="btn btn-sm text-white" aria-label="テーマ切替">🌙</button>
@@ -325,7 +325,7 @@
     // ===== i18n =====
     const I18N = {
       ja: {
-        siteTitle: 'EDH オタクカード画像一覧',
+        siteTitle: '晴れる屋コマンダーオタクカード紹介カード一覧',
         unofficial: '非公式ファンサイト',
         filterBtn: 'フィルター',
         searchPlaceholder: 'カード名で検索（含む）',
@@ -361,7 +361,7 @@
         analyticsDecline: '同意しない',
       },
       en: {
-        siteTitle: 'EDH Otaku Card Gallery',
+        siteTitle: 'Hareruya Commander Otaku Card List',
         unofficial: 'Unofficial Fan Site',
         filterBtn: 'Filters',
         searchPlaceholder: 'Search card name...',
