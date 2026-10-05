@@ -145,10 +145,9 @@
         <div class="row g-2 align-items-center mb-2">
           <div class="col-12 col-md-3">
             <div class="input-group">
-              <input id="q" type="search" class="form-control" placeholder="" aria-label="検索" aria-describedby="searchHelp">
+              <input id="q" type="search" class="form-control" placeholder="" aria-label="検索">
               <button class="btn btn-outline-secondary d-none" type="button" id="qClear" aria-label="クリア">&times;</button>
             </div>
-            <div id="searchHelp" class="form-text"></div>
           </div>
           <div class="col-6 col-md-2">
             <select id="presenter" class="form-select">
@@ -331,7 +330,6 @@
         unofficial: '非公式ファンサイト',
         filterBtn: 'フィルター',
         searchPlaceholder: 'カード名・本文・テーマで検索',
-        searchHelp: '本文は日本語優先。日本語の本文がないカードは英語で検索できます。',
         presAll: 'プレゼンター（すべて）',
         presOther: 'その他',
         sortNone: 'ソートなし',
@@ -369,7 +367,6 @@
         unofficial: 'Unofficial Fan Site',
         filterBtn: 'Filters',
         searchPlaceholder: 'Search name, rules text, or theme...',
-        searchHelp: 'Rules text uses Japanese when available, otherwise English.',
         presAll: 'Presenter (All)',
         presOther: 'Other',
         sortNone: 'No Sort',
@@ -416,7 +413,6 @@
       document.getElementById('filterToggleLabel').textContent = l.filterBtn;
       document.getElementById('q').placeholder = l.searchPlaceholder;
       document.getElementById('q').setAttribute('aria-label', l.searchPlaceholder);
-      document.getElementById('searchHelp').textContent = l.searchHelp;
       document.getElementById('presAll').textContent = l.presAll;
       document.getElementById('presOther').textContent = l.presOther;
       document.getElementById('sortNone').textContent = l.sortNone;
