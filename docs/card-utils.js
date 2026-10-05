@@ -10,6 +10,7 @@ export const KEY_YT = '動画URL';
 export const KEY_SCRY = 'Scryfall';
 export const KEY_THEME = 'テーマ';
 export const KEY_COMM = '関連する統率者';
+export const KEY_TEXT = 'オラクルテキスト';
 
 export const MAIN_PRESENTERS = new Set([
   'トロピ大塚', 'いってつ', 'スギちゃん', 'タイシン',
@@ -102,6 +103,10 @@ export function getCmc(row) {
   return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
 }
 
+function normalizeSearchText(value) {
+  return String(value ?? '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 export function buildSearchText(row) {
   const fields = [
     row[KEY_JA],
@@ -109,19 +114,19 @@ export function buildSearchText(row) {
     row[KEY_COMM],
     row[KEY_THEME],
   ];
-  return fields
+  const metadata = fields
     .flatMap(v => {
       const str = String(v ?? '');
       return str.split(/[\s,、，/／・]+/).filter(Boolean);
     })
-    .map(x => x.toLowerCase())
     .join(' ');
+  return normalizeSearchText(metadata + ' ' + String(row[KEY_TEXT] ?? ''));
 }
 
 // --- フィルタ・ソート ---
 
 export function filterCards(cards, { query = '', presenter = '', colors = [], cmc = '' } = {}) {
-  const q = s(query).toLowerCase();
+  const q = normalizeSearchText(query);
   const cmcValue = s(cmc) === '' ? null : Number(cmc);
 
   return cards.filter(row => {

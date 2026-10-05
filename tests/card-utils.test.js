@@ -244,6 +244,42 @@ describe('buildSearchText', () => {
 // ========================================
 // filterCards
 // ========================================
+describe('rules text search', () => {
+  const prepare = row => ({ ...row, _searchText: buildSearchText(row) });
+  const cards = [
+    prepare(makeCard({ 'カード名 (日本語)': 'テストの祭壇', 'オラクルテキスト': 'クリーチャー１体を生け贄に捧げる：カード１枚を引く。', 'Color Identity': 'B', 'CMC': 2 })),
+    prepare(makeCard({ 'カード名 (英語)': 'Test Insight', 'オラクルテキスト': 'Draw a card.\nCreate a token.', 'Color Identity': 'U', 'CMC': 2 })),
+    prepare(makeCard({ 'カード名 (日本語)': '本文のないカード', 'Color Identity': 'R', 'CMC': 1 })),
+  ];
+
+  it('日本語本文を部分一致で検索する', () => {
+    expect(filterCards(cards, { query: '生け贄' }).map(row => row['カード名 (日本語)'])).toEqual(['テストの祭壇']);
+    expect(filterCards(cards, { query: '生け贄に捧げる：カード' })).toHaveLength(1);
+  });
+
+  it('英語本文を大文字小文字を区別せず、改行をまたいで検索する', () => {
+    expect(filterCards(cards, { query: 'DRAW A CARD' })).toHaveLength(1);
+    expect(filterCards(cards, { query: 'card. create' })).toHaveLength(1);
+  });
+
+  it('全角・半角の数字、記号、英字と連続空白を揃える', () => {
+    expect(filterCards(cards, { query: '1体を生け贄に捧げる:' })).toHaveLength(1);
+    expect(filterCards(cards, { query: 'ＤＲＡＷ　　Ａ　ＣＡＲＤ' })).toHaveLength(1);
+    expect(filterCards(cards, { query: 'draw   a card' })).toHaveLength(1);
+  });
+
+  it('色・マナ総量の条件とも組み合わせる', () => {
+    expect(filterCards(cards, { query: '生け贄', colors: ['B'], cmc: '2' })).toHaveLength(1);
+    expect(filterCards(cards, { query: '生け贄', colors: ['U'] })).toHaveLength(0);
+  });
+
+  it('本文欠損のカードも名前検索と空検索で表示できる', () => {
+    expect(filterCards(cards, { query: '本文のない' })).toHaveLength(1);
+    expect(filterCards(cards, { query: '' })).toHaveLength(3);
+    expect(filterCards(cards, { query: '存在しない効果' })).toHaveLength(0);
+  });
+});
+
 describe('filterCards', () => {
   const cards = [
     makeCard({ 'カード名 (日本語)': '太陽の指輪', 'プレゼンター': 'トロピ大塚', 'Color Identity': '', 'CMC': 1 }),
