@@ -225,6 +225,31 @@ describe('doGet (JSON API)', () => {
     return { doGet, fetchDatabaseJson };
   }
 
+  it('何度呼ばれてもアクセスログは1日1行に集計する', () => {
+    const dbSheet = createMockSheet(['名前'], [['Sol Ring']]);
+    const logSheet = createMockSheet(['日時']);
+    const SpreadsheetApp = createMockSpreadsheetApp({ 'データベース': dbSheet, 'アクセスログ': logSheet });
+    const { doGet } = createDoGet({ SpreadsheetApp, ContentService: createMockContentService() });
+
+    for (let i = 0; i < 5; i++) doGet({ parameter: {} });
+
+    expect(logSheet._data).toHaveLength(2);
+    expect(logSheet._data[1][1]).toBe(5);
+  });
+
+  it('前日の行が最後にあれば新しい日の行を足す', () => {
+    const dbSheet = createMockSheet(['名前'], [['Sol Ring']]);
+    const logSheet = createMockSheet(['日時'], [['2000-01-01 JST', 7]]);
+    const SpreadsheetApp = createMockSpreadsheetApp({ 'データベース': dbSheet, 'アクセスログ': logSheet });
+    const { doGet } = createDoGet({ SpreadsheetApp, ContentService: createMockContentService() });
+
+    doGet({ parameter: {} });
+
+    expect(logSheet._data).toHaveLength(3);
+    expect(logSheet._data[1][1]).toBe(7);
+    expect(logSheet._data[2][1]).toBe(1);
+  });
+
   it('JSONレスポンスを返す', () => {
     const { doGet } = setupDoGet();
     const result = doGet({ parameter: {} });
