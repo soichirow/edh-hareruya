@@ -49,6 +49,7 @@ export function createMockSheet(headers = [], data = []) {
         const [row, col] = args;
         return {
           getValue: () => allValues[row - 1]?.[col - 1] ?? '',
+          setValue: (value) => { allValues[row - 1][col - 1] = value; },
         };
       }
       return { setValues: () => {}, clearContent: () => {}, sort: () => {} };

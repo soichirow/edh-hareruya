@@ -15,7 +15,10 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/** アクセスログを記録 */
+/**
+ * アクセス数を1日1行に集計して記録する。
+ * 匿名のGETごとに行を足すとシートが際限なく増えるので、行数は日数までに抑える。
+ */
 function logAccess_() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -24,7 +27,16 @@ function logAccess_() {
       sheet = ss.insertSheet(LOG_SHEET_NAME);
       sheet.appendRow(['日時']);
     }
-    sheet.appendRow([new Date()]);
+    // シートが日付に自動変換しないよう、接尾辞付きの文字列をキーにする。
+    const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+    const today = new Date(Date.now() + JST_OFFSET_MS).toISOString().slice(0, 10) + ' JST';
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1 && sheet.getRange(lastRow, 1).getValue() === today) {
+      const count = sheet.getRange(lastRow, 2);
+      count.setValue(Number(count.getValue()) + 1);
+    } else {
+      sheet.appendRow([today, 1]);
+    }
   } catch (err) {
     console.log('logAccess_ error: ' + err);
   }
